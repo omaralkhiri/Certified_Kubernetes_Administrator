@@ -1,0 +1,137 @@
+# Kubernetes DNS Documentation  
+
+## Overview  
+DNS (Domain Name System) in Kubernetes is a critical component that enables service discovery within the cluster. It allows pods and services to communicate with each other using domain names instead of hardcoded IP addresses. Kubernetes deploys a built-in DNS server (typically CoreDNS) to manage DNS records for services and pods.  
+
+This documentation covers:  
+- How DNS resolution works in Kubernetes  
+- Service and Pod DNS records  
+- Fully Qualified Domain Names (FQDNs)  
+- Namespace-based DNS resolution  
+
+---  
+
+## DNS in Kubernetes  
+
+### 1. Built-in DNS Server  
+Kubernetes automatically deploys a DNS server (e.g., CoreDNS) when a cluster is set up. This DNS server is responsible for resolving service and pod names to their respective IP addresses.  
+
+### 2. Service DNS Records  
+When a **Service** is created, Kubernetes automatically generates a DNS record mapping the service name to its ClusterIP.  
+
+#### **DNS Naming Convention for Services**  
+The DNS record for a service follows this structure:  
+```
+<service-name>.<namespace>.svc.cluster.local
+```
+- **`<service-name>`**: Name of the Service (e.g., `web-service`).  
+- **`<namespace>`**: Namespace where the Service is deployed (e.g., `default`).  
+- **`svc`**: Indicates that this is a Service record.  
+- **`cluster.local`**: Default cluster domain.  
+
+#### **Example**  
+- If a Service named `web-service` is in the `default` namespace, its FQDN is:  
+  ```
+  web-service.default.svc.cluster.local
+  ```
+- If the Service is in the `apps` namespace, its FQDN becomes:  
+  ```
+  web-service.apps.svc.cluster.local
+  ```
+
+#### **Shortcut (Same Namespace)**  
+If a pod is in the same namespace as the service, it can refer to the service using just the service name:  
+```
+web-service
+```
+If the pod is in a different namespace, it must use the full name:  
+```
+web-service.apps
+```
+
+### 3. Pod DNS Records  
+By default, Kubernetes does not create DNS records for Pods. However, this can be enabled explicitly.  
+
+#### **DNS Naming Convention for Pods**  
+When enabled, Pods get DNS records in the following format:  
+```
+<pod-ip-with-dashes>.<namespace>.pod.cluster.local
+```
+- **`<pod-ip-with-dashes>`**: The Pod's IP address with dots replaced by dashes (e.g., `10-244-1-5`).  
+- **`<namespace>`**: Namespace where the Pod resides.  
+- **`pod`**: Indicates that this is a Pod record.  
+- **`cluster.local`**: Default cluster domain.  
+
+#### **Example**  
+- A Pod with IP `10.244.1.5` in the `default` namespace will have the DNS record:  
+  ```
+  10-244-1-5.default.pod.cluster.local
+  ```
+- This resolves to the Pod's actual IP (`10.244.1.5`).  
+
+### 4. Cluster Domain  
+The default root domain for all DNS records in Kubernetes is:  
+```
+cluster.local
+```
+This can be customized during cluster setup.  
+
+---  
+
+## How DNS Resolution Works  
+
+### **Scenario 1: Pod-to-Service Communication**  
+- A Pod (`test-pod`) in the `default` namespace wants to access a Service (`web-service`).  
+- If `web-service` is in the same namespace (`default`), the Pod can simply use:  
+  ```
+  web-service
+  ```
+- If `web-service` is in the `apps` namespace, the Pod must use:  
+  ```
+  web-service.apps
+  ```
+- The DNS server resolves this to the Service's ClusterIP (`10.107.37.188`).  
+
+### **Scenario 2: Pod-to-Pod Communication (With DNS Records Enabled)**  
+- A Pod (`test-pod`) wants to reach another Pod (`web-pod`) with IP `10.244.2.5`.  
+- The DNS record for `web-pod` is:  
+  ```
+  10-244-2-5.default.pod.cluster.local
+  ```
+- The requesting Pod can resolve this to `10.244.2.5`.  
+
+---  
+
+## Summary  
+
+| Object | DNS Record Format | Example |
+|--------|------------------|---------|
+| **Service** | `<service-name>.<namespace>.svc.cluster.local` | `web-service.default.svc.cluster.local` |
+| **Pod** (if enabled) | `<pod-ip-with-dashes>.<namespace>.pod.cluster.local` | `10-244-1-5.default.pod.cluster.local` |
+
+### **Key Takeaways**  
+1. **Services** automatically get DNS records.  
+2. **Pods** need explicit configuration to get DNS records.  
+3. **Namespaces** act as subdomains for DNS resolution.  
+4. **Same-namespace access** allows using short names (`web-service`).  
+5. **Cross-namespace access** requires full names (`web-service.apps`).  
+
+---  
+
+## Next Steps  
+In the next lecture, we will cover:  
+- How Kubernetes implements DNS (CoreDNS configuration).  
+- Modifying DNS settings in a cluster.  
+- Debugging DNS issues in Kubernetes.  
+
+For hands-on practice, try querying DNS records from a Pod using `nslookup` or `dig`.  
+
+```sh
+kubectl exec -it test-pod -- nslookup web-service
+```
+
+This will help verify DNS resolution within the cluster.  
+
+---  
+
+**End of Document** 🚀

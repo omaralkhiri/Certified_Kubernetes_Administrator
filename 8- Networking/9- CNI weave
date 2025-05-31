@@ -1,0 +1,117 @@
+# **Weave CNI Plugin Documentation**  
+
+## **1. Introduction**  
+The **Weave CNI plugin** is a networking solution for Kubernetes clusters that simplifies pod-to-pod communication across nodes. Unlike traditional routing-based approaches, Weave provides a scalable and efficient way to manage networking in large Kubernetes environments.  
+
+This documentation explains how Weave works, its architecture, deployment, and key features.  
+
+---
+
+## **2. How Weave Works**  
+
+### **2.1. Traditional Pod Networking Challenges**  
+In a basic Kubernetes setup, pod networking relies on routing tables to direct traffic between nodes. However, as clusters grow (hundreds of nodes with thousands of pods), maintaining routing tables becomes impractical due to:  
+- **Scalability issues** (routing tables may not support large numbers of entries).  
+- **Complexity** in managing dynamic pod IP assignments.  
+
+### **2.2. Weave’s Solution: Agent-Based Networking**  
+Weave introduces an **agent-based model** where each node runs a **Weave peer (agent)** that:  
+- Maintains a **topology of the entire cluster** (nodes, pods, and their IPs).  
+- Encapsulates and routes traffic efficiently between pods across nodes.  
+
+#### **Key Components:**  
+1. **Weave Bridge (`weave`)**  
+   - A virtual network interface created on each node.  
+   - Assigns IP addresses to pods and manages local traffic.  
+
+2. **Weave Peers (Agents)**  
+   - Deployed as **DaemonSets** (one per node).  
+   - Communicate with each other to exchange network topology information.  
+   - Encapsulate and route packets between nodes.  
+
+3. **Packet Handling**  
+   - When a pod sends traffic to another pod on a different node:  
+     1. The **source Weave agent intercepts** the packet.  
+     2. **Encapsulates** it in a new packet with node-level routing.  
+     3. Sends it to the **destination node’s Weave agent**.  
+     4. The destination agent **decapsulates** the packet and delivers it to the target pod.  
+
+---
+
+## **3. IP Address Management (IPAM)**  
+Weave **automatically assigns IPs** to pods from a predefined range.  
+- Each node gets a subnet, and Weave ensures no IP conflicts.  
+- Supports multiple bridge networks (e.g., Docker bridge + Weave bridge).  
+- Routing is configured inside containers to ensure traffic flows through Weave.  
+
+> **Note:** In upcoming sections, we will explore Weave’s exact IP allocation strategy.  
+
+---
+
+## **4. Deploying Weave in Kubernetes**  
+
+### **4.1. Prerequisites**  
+- A functional Kubernetes cluster with nodes connected.  
+- `kubectl` configured to interact with the cluster.  
+
+### **4.2. Installation**  
+Weave can be deployed with a **single command**:  
+```sh
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+```  
+This command:  
+- Deploys **Weave as a DaemonSet** (one pod per node).  
+- Sets up necessary **network policies and routes**.  
+
+### **4.3. Verification**  
+Check if Weave pods are running:  
+```sh
+kubectl get pods -n kube-system -l name=weave-net
+```  
+View logs for troubleshooting:  
+```sh
+kubectl logs -n kube-system <weave-pod-name>
+```  
+
+---
+
+## **5. Key Advantages of Weave**  
+
+| Feature | Benefit |
+|---------|---------|
+| **Automatic IP Management** | No manual IP assignment needed. |
+| **Encrypted Traffic** | Optional encryption for secure pod communication. |
+| **No External Dependencies** | Works without additional routers or SDN controllers. |
+| **Scalability** | Handles large clusters efficiently. |
+| **Multi-Network Support** | Pods can connect to multiple bridges (e.g., Docker + Weave). |
+
+---
+
+## **6. Troubleshooting**  
+### **Common Issues & Fixes**  
+| Issue | Solution |
+|-------|----------|
+| Weave pods not starting | Check node connectivity, firewall rules. |
+| Pods unable to communicate | Verify `weave` bridge and IP assignments. |
+| IP conflicts | Ensure IP ranges don’t overlap with existing networks. |
+
+For detailed debugging:  
+```sh
+kubectl describe pod -n kube-system <weave-pod-name>
+```  
+
+---
+
+## **7. Conclusion**  
+Weave CNI provides a **scalable, easy-to-deploy** networking solution for Kubernetes. By using **agent-based routing and encapsulation**, it eliminates the need for complex routing tables and simplifies cross-node pod communication.  
+
+For further details, refer to the [official Weaveworks documentation](https://www.weave.works/docs/).  
+
+---
+**Next Steps:**  
+- Explore **Weave’s IPAM configuration**.  
+- Compare Weave with other CNI plugins (Calico, Flannel).  
+- Learn about **network policies** in Weave.  
+
+---
+This documentation provides a **comprehensive guide** to Weave CNI, covering its architecture, deployment, and operational aspects. Let us know if you need further clarifications! 🚀

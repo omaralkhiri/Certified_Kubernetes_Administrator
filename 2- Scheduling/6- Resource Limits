@@ -1,0 +1,161 @@
+# Kubernetes Resource Management: Understanding Requests, Limits, and Resource Quotas
+
+## Overview
+
+In a Kubernetes cluster, resources such as CPU and memory are crucial for pod scheduling and management. Each node in the cluster has a set of available CPU and memory resources. Pods running on the cluster require resources to function, and it is the Kubernetes scheduler's responsibility to ensure that pods are placed on nodes with sufficient resources. If a node lacks enough resources, the pod remains in a **pending** state.
+
+This documentation explains how Kubernetes handles resource management, including resource requests, limits, and quotas, to ensure that your cluster runs efficiently and that pods do not overwhelm the node’s resources.
+
+---
+
+## Resource Requests and Limits
+
+### Resource Requests
+
+A **resource request** is the minimum amount of CPU or memory required for a pod to run. When a pod is created, the scheduler uses the resource requests to determine which node has enough available resources to host the pod. If no node can accommodate the pod, the pod enters a **pending** state.
+
+For example, you can define the resource request in the pod definition as:
+
+```yaml
+resources:
+  requests:
+    cpu: "2"
+    memory: "1Gi"
+```
+
+In this example:
+- **2 CPUs** and **1 Gi of memory** are requested for the pod.
+
+### Resource Limits
+
+A **resource limit** defines the maximum amount of CPU or memory a pod can use. Without limits, a container within a pod can consume all the available resources on a node, possibly causing other containers to be starved of resources. You can set a limit to prevent this from happening.
+
+To set resource limits for a pod, you would use the following configuration in the pod definition:
+
+```yaml
+resources:
+  limits:
+    cpu: "4"
+    memory: "2Gi"
+```
+
+In this example:
+- **4 CPUs** and **2 Gi of memory** are set as the limits for the pod.
+
+If a pod tries to exceed its CPU limit, Kubernetes throttles its CPU usage. However, memory limits work differently. If a pod exceeds its memory limit, it is terminated with an **OOM (Out of Memory)** error.
+
+---
+
+## Understanding CPU and Memory Values
+
+- **CPU**: A Kubernetes CPU request is defined in terms of vCPUs (virtual CPUs). One vCPU is equivalent to one virtual core in cloud platforms such as AWS, Google Cloud, or Azure. You can define CPU values in the pod definition using milliCPU units. For example:
+  - **100m** represents **0.1 CPU**.
+  - **1** represents **1 vCPU**.
+  
+- **Memory**: Kubernetes uses **Mi (Mebibytes)** for memory. The difference between **Mi** and **MB** is:
+  - **1 Mi** = **1024 KiB**.
+  - **1 MB** = **1000 KiB**.
+  You can also use **Gi** for **Gibibytes**. 
+
+Example memory settings:
+```yaml
+resources:
+  requests:
+    memory: "512Mi"
+  limits:
+    memory: "1Gi"
+```
+
+---
+
+## Default Resource Behavior
+
+By default, Kubernetes does not set resource requests or limits for pods, meaning a pod can consume as much resource as the node can provide. This could lead to one pod using all resources, causing other pods to starve. Therefore, it’s highly recommended to set appropriate resource requests and limits for your pods.
+
+### No Requests or Limits Set
+
+If no requests or limits are defined for a pod, it can consume all available resources, affecting other pods on the node. This is not ideal.
+
+### Requests Set, No Limits Set
+
+If a pod has a request set but no limit, it is guaranteed the requested amount of resources but can consume additional resources as available on the node. This setup ensures that the pod can scale its resource usage when needed, but it can lead to resource contention if multiple pods have no limits.
+
+### Requests and Limits Set
+
+When both requests and limits are set, each pod is guaranteed its requested resources, and it cannot exceed the defined limits. This configuration offers a balanced approach and is commonly used in production environments.
+
+### No Requests Set, Limits Set
+
+If only limits are set without requests, Kubernetes will automatically set the requests equal to the limits for the pod. This configuration ensures that the pod gets its full quota of resources.
+
+---
+
+## Resource Quotas and Limit Ranges
+
+### Limit Ranges
+
+**LimitRanges** allow you to define default requests and limits at the namespace level for all pods and containers created within that namespace. This ensures that even if a pod definition does not specify requests or limits, the default values will be applied.
+
+Example of a LimitRange:
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-memory-limits
+spec:
+  limits:
+    - defaultRequest:
+        cpu: "500m"
+        memory: "512Mi"
+      default:
+        cpu: "1"
+        memory: "1Gi"
+      max:
+        cpu: "2"
+        memory: "2Gi"
+      min:
+        cpu: "100m"
+        memory: "128Mi"
+```
+
+In this example:
+- **defaultRequest**: The default resource request for pods and containers.
+- **default**: The default resource limit for pods and containers.
+- **max**: The maximum resource limits for a container or pod.
+- **min**: The minimum resource requests.
+
+### Resource Quotas
+
+A **ResourceQuota** is a namespace-level object that limits the total amount of resources that can be used across all pods in a given namespace. It allows administrators to set limits on the total CPU or memory usage within a namespace.
+
+Example of a ResourceQuota:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: resource-quota-example
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: "4Gi"
+    limits.cpu: "10"
+    limits.memory: "10Gi"
+```
+
+In this example:
+- **requests.cpu**: Total CPU requested by all pods in the namespace.
+- **requests.memory**: Total memory requested by all pods in the namespace.
+- **limits.cpu**: Total CPU limits across all pods in the namespace.
+- **limits.memory**: Total memory limits across all pods in the namespace.
+
+Resource quotas help manage resource consumption in large clusters with multiple users and prevent any namespace from consuming all the cluster resources.
+
+---
+
+## Conclusion
+
+Proper resource management is critical for efficient and stable Kubernetes cluster operation. By setting appropriate **resource requests** and **limits**, and by using **limit ranges** and **resource quotas**, you can ensure fair resource distribution, prevent resource contention, and avoid overloading nodes.
+
+For more information on Kubernetes resource management, refer to the official Kubernetes documentation.

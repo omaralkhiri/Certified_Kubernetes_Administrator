@@ -1,0 +1,91 @@
+# Documentation: Docker Security and Process Isolation
+
+## Introduction
+
+In this lecture, we will discuss security concepts in Docker, which is essential for understanding security in Kubernetes. If you are already familiar with Docker security, you may skip this section and proceed to the next lecture. Here, we will explore key concepts related to Docker security, including process isolation, user management, and Linux capabilities.
+
+---
+
+## Docker Process Isolation
+
+### Host and Container Processes
+
+When Docker is installed on a host, the host runs its own set of processes, such as operating system processes, the Docker daemon, and the SSH server. When you run a Docker container (e.g., an Ubuntu container with a process that sleeps for an hour), the container operates in its own namespace.
+
+Unlike virtual machines, containers are not completely isolated from the host. Containers share the same kernel as the host but are isolated using Linux namespaces. Each container has its own namespace, and processes within the container run on the host but are confined to their namespace.
+
+- **From the container's perspective**: It can only see its own processes. For example, if you list processes inside the container, you will see the `sleep` process with a process ID (PID) of 1.
+- **From the host's perspective**: The host can see all processes, including those in container namespaces. When you list processes on the host, the `sleep` process will appear, but with a different PID. This is because processes can have different PIDs in different namespaces.
+
+This mechanism is how Docker isolates containers on a system.
+
+---
+
+## User Management in Docker
+
+### Default User in Containers
+
+The Docker host has a set of users, including the `root` user and non-root users. By default, Docker runs processes within containers as the `root` user. This can be observed when running commands both inside the container and on the host.
+
+### Running Containers as Non-Root Users
+
+If you do not want processes within the container to run as the `root` user, you can specify a different user using the `--user` option in the `docker run` command. For example:
+
+```bash
+docker run --user 1000 ubuntu sleep 3600
+```
+
+This command runs the `sleep` process with the user ID `1000`.
+
+Alternatively, you can define the user in the Docker image itself during creation. For example, you can use the `USER` instruction in a Dockerfile to set the user ID:
+
+```Dockerfile
+FROM ubuntu
+USER 1000
+```
+
+After building the image, running the container will execute processes with the specified user ID (`1000`).
+
+---
+
+## Security Implications of Running as Root
+
+### Root User in Containers vs. Host
+
+A common concern is whether the `root` user inside a container has the same privileges as the `root` user on the host. If this were the case, it could pose significant security risks. However, Docker implements security features to limit the capabilities of the `root` user within containers.
+
+### Linux Capabilities
+
+The `root` user on a Linux system has unrestricted access and can perform actions such as:
+
+- Modifying files and permissions.
+- Creating or killing processes.
+- Performing network operations (e.g., binding to ports).
+- Rebooting the host.
+- Manipulating the system clock.
+
+These actions are governed by Linux capabilities. Docker, by default, runs containers with a limited set of capabilities. This ensures that processes within the container cannot perform dangerous operations, such as rebooting the host or disrupting other containers.
+
+### Customizing Capabilities
+
+You can customize the capabilities available to a container:
+
+- **Add Capabilities**: Use the `--cap-add` option in the `docker run` command to grant additional privileges.
+- **Drop Capabilities**: Use the `--cap-drop` option to remove specific privileges.
+- **Privileged Mode**: Use the `--privileged` flag to run the container with all capabilities enabled. This should be used with caution, as it removes most restrictions.
+
+Example:
+
+```bash
+docker run --cap-add=NET_ADMIN ubuntu sleep 3600
+```
+
+This command grants the container the `NET_ADMIN` capability, allowing it to perform network-related operations.
+
+---
+
+## Conclusion
+
+Docker provides robust mechanisms for process isolation and user management, ensuring that containers operate securely on a host. By leveraging Linux namespaces and capabilities, Docker limits the privileges of the `root` user within containers, reducing the risk of malicious or accidental harm to the host or other containers.
+
+In the next lecture, we will explore security contexts in Kubernetes, building on the foundational knowledge of Docker security discussed here.

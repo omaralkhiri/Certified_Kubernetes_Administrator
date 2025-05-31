@@ -1,0 +1,70 @@
+# Kubernetes Cluster Certificate Health Check
+
+## Introduction
+As a new administrator in a Kubernetes environment, you may be tasked with performing a health check of all certificates in the cluster. It is crucial to understand how the cluster was set up, as different deployment methods manage certificates differently. If the cluster was deployed manually, you would generate all certificates yourself. However, if it was provisioned using an automated tool like kubeadm, the tool takes care of certificate generation and management.
+
+This documentation focuses on a cluster provisioned by kubeadm and outlines the process of identifying and verifying certificates for health checks.
+
+## Identifying Certificates in a kubeadm Cluster
+In a kubeadm-provisioned environment, certificates are primarily managed under the `/etc/kubernetes/` directory. Follow these steps to locate and inspect the certificates:
+
+1. **Locate the API Server Definition File**  
+   The API server configuration file can be found under:
+   ```bash
+   /etc/kubernetes/manifests/kube-apiserver.yaml
+   ```
+   This file contains information about all certificates used by the API server.
+
+2. **List of Certificate Details**  
+   To systematically analyze the certificates, create a table with the following details:
+   - Certificate file path
+   - Common name (CN) of the certificate
+   - Subject Alternative Names (SANs)
+   - Organization (O) associated with the certificate
+   - Issuer of the certificate
+   - Expiration date
+
+   A sample spreadsheet with this structure is available in the resources section.
+
+## Inspecting Certificate Details
+To examine a certificate, use the `openssl` command:
+```bash
+openssl x509 -in <certificate-file> -text -noout
+```
+### Key Information to Verify
+- **Subject Name**: Located under the `Subject` section (e.g., `CN = kube-apiserver`)
+- **Alternate Names**: Verify all SANs are correctly configured.
+- **Validity**: Check the expiration date under the `Validity` section.
+- **Issuer**: Ensure the certificate is issued by the expected Certificate Authority (CA). kubeadm typically names the Kubernetes CA as `kubernetes-ca`.
+
+Follow this process for all certificates to ensure they are correctly configured, valid, and issued by the correct CA.
+
+## Troubleshooting Certificate Issues
+When certificate issues arise, logs can provide insights into potential problems.
+
+### Checking Logs in Different Deployments
+1. **Manually Set Up Cluster (Native Services)**:
+   - Check service logs using OS-specific logging tools:
+   ```bash
+   journalctl -u kube-apiserver -n 50
+   ```
+
+2. **kubeadm-Managed Cluster (Pods-Based)**:
+   - Use `kubectl logs` to check component logs:
+   ```bash
+   kubectl logs -n kube-system <pod-name>
+   ```
+   If a critical component like the API server or etcd is down, `kubectl` may not function.
+
+3. **Fetching Logs from Docker**:
+   If `kubectl` is unavailable, retrieve logs at the container level:
+   ```bash
+   docker ps -a
+   docker logs <container-id>
+   ```
+
+## Conclusion
+By following these steps, you can efficiently perform a health check on all Kubernetes cluster certificates. Regularly verifying certificate validity and issuer details ensures a secure and well-maintained cluster environment.
+
+For more details, refer to the official Kubernetes documentation (link available in the references section).
+

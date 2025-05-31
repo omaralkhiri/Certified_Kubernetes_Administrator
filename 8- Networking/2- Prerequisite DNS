@@ -1,0 +1,155 @@
+# **DNS in Linux: A Comprehensive Guide for Beginners**
+
+## **1. Introduction to DNS**
+DNS (Domain Name System) is a system that translates human-readable hostnames (e.g., `google.com`) into machine-readable IP addresses (e.g., `142.250.190.78`). This allows users to access services using names instead of memorizing numerical IP addresses.
+
+In Linux, DNS resolution can be managed in two primary ways:
+1. **Local hostname resolution** (`/etc/hosts` file)
+2. **Remote DNS resolution** (using a DNS server)
+
+---
+
+## **2. Local Hostname Resolution: `/etc/hosts`**
+The `/etc/hosts` file is a simple text file that maps hostnames to IP addresses locally. 
+
+### **Example Scenario:**
+- **System A:** `192.168.1.10`
+- **System B:** `192.168.1.11` (running a database service)
+
+To make `System A` recognize `System B` as `db` instead of its IP:
+1. Edit `/etc/hosts` on `System A`:
+   ```plaintext
+   192.168.1.11  db
+   ```
+2. Now, `ping db` will resolve to `192.168.1.11`.
+
+### **Key Notes:**
+- The `/etc/hosts` file is the **first source of truth** for the system.
+- The system **does not verify** if the hostname matches the remote system’s actual hostname.
+- You can add multiple names for the same IP (e.g., `db`, `google.com` pointing to `192.168.1.11`).
+
+### **Limitations:**
+- Managing `/etc/hosts` becomes difficult in large networks.
+- If an IP changes, you must update `/etc/hosts` on every machine.
+
+---
+
+## **3. Remote DNS Resolution: Using a DNS Server**
+To centralize name resolution, we use a **DNS server**.
+
+### **Configuring DNS on Linux**
+The DNS server is specified in `/etc/resolv.conf`:
+```plaintext
+nameserver 192.168.1.100
+```
+- This tells the system to forward DNS queries to `192.168.1.100`.
+
+### **How It Works:**
+1. When a hostname is requested (e.g., `ping db`), the system:
+   - First checks `/etc/hosts`.
+   - If not found, queries the DNS server.
+2. If the DNS server doesn’t know the hostname, it can **forward** the request to a public DNS (e.g., Google’s `8.8.8.8`).
+
+### **Advantages:**
+- Centralized management.
+- No need to update every machine when an IP changes.
+
+---
+
+## **4. Name Resolution Order**
+The order in which Linux resolves hostnames is defined in `/etc/nsswitch.conf`:
+```plaintext
+hosts: files dns
+```
+- `files` → `/etc/hosts`
+- `dns` → DNS server
+
+### **Example:**
+If `/etc/hosts` has:
+```plaintext
+192.168.1.115 test-server
+```
+But the DNS server has:
+```plaintext
+test-server → 192.168.1.116
+```
+- The system will use `192.168.1.115` because `files` comes before `dns`.
+
+---
+
+## **5. Domain Names and Search Domains**
+### **Domain Name Structure**
+- Example: `www.google.com`
+  - `.` → Root domain
+  - `com` → Top-Level Domain (TLD)
+  - `google` → Domain name
+  - `www` → Subdomain
+
+### **Search Domains in `/etc/resolv.conf`**
+If your organization uses `mycompany.com`, you can configure search domains so that `ping web` resolves to `web.mycompany.com`:
+```plaintext
+search mycompany.com prod.mycompany.com
+```
+Now:
+- `ping web` → Tries `web.mycompany.com`, then `web.prod.mycompany.com`.
+
+---
+
+## **6. DNS Record Types**
+| Record Type | Purpose |
+|-------------|---------|
+| **A** | Maps hostname → IPv4 |
+| **AAAA** | Maps hostname → IPv6 |
+| **CNAME** | Maps alias → another hostname (e.g., `eat.example.com` → `food.example.com`) |
+| **MX** | Mail server records |
+| **NS** | Name server records |
+
+---
+
+## **7. DNS Troubleshooting Tools**
+### **`ping`**
+- Tests basic connectivity but **not pure DNS resolution** (checks `/etc/hosts` first).
+
+### **`nslookup`**
+- Queries DNS servers directly (ignores `/etc/hosts`).
+  ```bash
+  nslookup google.com
+  ```
+
+### **`dig`**
+- Provides detailed DNS lookup information.
+  ```bash
+  dig google.com
+  ```
+
+---
+
+## **8. Summary of Key Files**
+| File | Purpose |
+|------|---------|
+| `/etc/hosts` | Local hostname-to-IP mappings |
+| `/etc/resolv.conf` | DNS server configuration |
+| `/etc/nsswitch.conf` | Defines name resolution order (`files` vs `dns`) |
+
+---
+
+## **9. Practical Lab Exercise**
+### **Challenge:**
+- Two machines (`A: 192.168.1.10`, `B: 192.168.1.11`).
+- Configure `A` to resolve `B` as `db` using `/etc/hosts`.
+- Then, configure a DNS server (`192.168.1.100`) and update `/etc/resolv.conf`.
+- Test resolution using `ping`, `nslookup`, and `dig`.
+
+### **Expected Outcome:**
+- `ping db` → `192.168.1.11` (from `/etc/hosts`).
+- `nslookup db` → Queries DNS server (if entry exists).
+
+---
+
+## **10. Conclusion**
+- `/etc/hosts` is useful for small networks or testing.
+- DNS servers are essential for scalable environments.
+- Understanding resolution order (`files` vs `dns`) is crucial for troubleshooting.
+- Tools like `nslookup` and `dig` help verify DNS configurations.
+
+This guide provides a foundation for managing DNS in Linux. Practice in a lab environment to reinforce these concepts! 🚀

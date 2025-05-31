@@ -1,0 +1,49 @@
+# In-Place Resizing of Pods in Kubernetes
+
+## Introduction
+In Kubernetes, modifying resource requirements for a pod in a deployment traditionally results in the deletion of the existing pod and the creation of a new pod with the updated resource specifications. This default behavior can be disruptive, especially for stateful workloads. To address this issue, Kubernetes has introduced an improvement called **In-Place Update of Pod Resources**.
+
+## Current Behavior
+As of Kubernetes version 1.32, when a resource requirement is modified in a deployment, the default behavior is:
+- The existing pod is terminated.
+- A new pod is created with the updated resource definitions.
+
+This approach can cause downtime or disruption in workloads, particularly those that maintain state.
+
+## In-Place Pod Resource Update
+Kubernetes 1.27 introduced **In-Place Pod Vertical Scaling** as an alpha feature. This feature allows resource modifications without requiring pod termination, thus minimizing disruptions.
+
+### Enabling In-Place Pod Vertical Scaling
+Since this feature is in the alpha stage, it is **not enabled by default**. To enable it, the following feature flag must be set:
+```yaml
+--feature-gates=InPlacePodVerticalScaling=true
+```
+Once enabled, the pod definition supports **resize policy parameters**, which define restart policies for each resource type.
+
+## Resize Policy Options
+The **resize policy** allows specifying whether a pod should restart upon resource modification. For example:
+- **CPU updates** can occur without requiring a pod restart.
+- **Memory updates** may require a restart of the pod.
+
+### Example
+If a pod's CPU request is increased to `1 vCPU`, the pod does not need to be restarted. Instead, it will be updated in place with the new CPU allocation.
+
+## Limitations of In-Place Pod Resizing
+While this feature enhances Kubernetes' flexibility, it comes with some limitations:
+1. **Only CPU and memory resources can be resized.**
+2. **Pod QoS class cannot be changed.**
+3. **Init containers cannot be resized.**
+4. **Resource requests and limits cannot be modified after being set.**
+5. **A container’s memory limit cannot be reduced below its current usage.** If a request results in an unfeasible memory allocation, the resize status remains `InProgress` until resources are available.
+6. **Windows pods cannot be resized as of now.**
+
+## Future Outlook
+As of Kubernetes 1.33, this feature remains in the alpha stage and is expected to progress to beta and stable releases in future versions. Once stable, it will be enabled by default and become a critical part of Kubernetes' resource management capabilities.
+
+## Next Steps
+While this document focuses on **manual scaling** of pods, the **Vertical Pod Autoscaler (VPA)** automates resource adjustments. The next discussion will cover VPA and how it integrates with in-place resizing.
+
+---
+
+This document provides an overview of in-place pod resizing and how to enable and use it effectively. For further updates, always check the official Kubernetes release notes.
+

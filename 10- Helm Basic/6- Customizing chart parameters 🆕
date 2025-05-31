@@ -1,0 +1,111 @@
+# Customizing Helm Chart Parameters for WordPress Deployment
+
+When deploying an application using Helm, you often install charts with their default values. However, there may be scenarios where you want to customize certain parameters during installation. For example, a WordPress installation might have a default name, such as "User's Blog," but you may prefer a different name for your site. 
+
+This documentation will guide you on how to modify default values in the `values.yaml` file and customize your Helm deployments, particularly for the WordPress application.
+
+## Default Value Assignment in WordPress Chart
+
+When a WordPress application is deployed using Helm, the chart typically has predefined values in the `values.yaml` file. One such value is the blog name, which is initially set to "User's Blog." This value is often set as an environment variable within the chart deployment (via YAML files), and Helm will use the default `values.yaml` file unless overridden.
+
+### Example of Default Values:
+
+```yaml
+wordpressBlogName: "User's Blog"
+```
+
+During installation, Helm automatically pulls the chart and uses these default values unless we specifically override them.
+
+## Customizing Parameters During Installation
+
+There are several ways to customize the WordPress deployment, allowing you to change the blog name, user email, or any other parameter defined in the `values.yaml` file. Below are the methods to achieve this customization.
+
+### 1. **Using the `--set` Command-Line Option**
+
+One way to customize Helm chart values is by using the `--set` option during the `helm install` command. This allows you to override individual parameters directly on the command line, without modifying the `values.yaml` file.
+
+#### Example: Customizing the WordPress Blog Name and User Email
+
+You can pass parameters to Helm via the command line as follows:
+
+```bash
+helm install my-wordpress bitnami/wordpress \
+  --set wordpressBlogName="Helm Tutorials" \
+  --set wordpressEmail="john@example.com"
+```
+
+In this example:
+- The `wordpressBlogName` is set to "Helm Tutorials" (instead of the default "User's Blog").
+- The `wordpressEmail` is set to "john@example.com".
+
+You can use the `--set` option multiple times to pass different values, each of which will override the corresponding values from the default `values.yaml` file.
+
+### 2. **Using a Custom `values.yaml` File**
+
+If there are too many parameters to configure using `--set`, it’s often more convenient to place your custom values in a separate `custom-values.yaml` file. This way, you can manage configurations more easily without cluttering the command line.
+
+#### Example: Creating and Using a Custom `values.yaml` File
+
+1. Create a file named `custom-values.yaml` and add your customized values:
+
+```yaml
+wordpressBlogName: "Helm Tutorials"
+wordpressEmail: "john@example.com"
+```
+
+2. Use the `--values` option to pass this custom file to the `helm install` command:
+
+```bash
+helm install my-wordpress bitnami/wordpress --values custom-values.yaml
+```
+
+This command tells Helm to use the values defined in `custom-values.yaml` and override any default values in the chart.
+
+### 3. **Modifying the Built-in `values.yaml` File Directly**
+
+If you want to make more extensive modifications to the default chart, you can download the chart, extract it, modify the `values.yaml` file directly, and then install it.
+
+#### Steps for Modifying the `values.yaml` File
+
+1. **Pull the Chart:**
+   
+   First, you need to pull the WordPress chart from the repository using the `helm pull` command:
+
+   ```bash
+   helm pull bitnami/wordpress --untar
+   ```
+
+   The `--untar` option extracts the chart after downloading it, creating a directory named `wordpress/` that contains all the files, including `values.yaml`.
+
+2. **Edit the `values.yaml` File:**
+
+   Navigate to the `wordpress/` directory and open the `values.yaml` file with any text editor:
+
+   ```bash
+   cd wordpress
+   vi values.yaml
+   ```
+
+   Modify the desired parameters in the `values.yaml` file, such as the blog name and email.
+
+3. **Install the Modified Chart:**
+
+   After saving the changes to the `values.yaml` file, you can install the chart by specifying the path to the modified chart directory:
+
+   ```bash
+   helm install my-wordpress ./wordpress
+   ```
+
+   Here, `./wordpress` refers to the current directory where the chart files are stored. This will use the local, modified `values.yaml` file instead of the default one.
+
+## Summary of Methods
+
+| Method                           | Description                                                             | Command/Example                                                     |
+|-----------------------------------|-------------------------------------------------------------------------|---------------------------------------------------------------------|
+| **Using `--set`**                 | Modify specific parameters directly on the command line.               | `helm install my-wordpress bitnami/wordpress --set wordpressBlogName="Helm Tutorials"` |
+| **Using a Custom `values.yaml`**  | Use a custom YAML file with the `--values` flag to override values.    | `helm install my-wordpress bitnami/wordpress --values custom-values.yaml` |
+| **Modifying the Chart Directly**  | Download, modify, and install the chart from a local directory.        | `helm pull bitnami/wordpress --untar && helm install my-wordpress ./wordpress` |
+
+## Conclusion
+
+By using the `--set` option, a custom `values.yaml` file, or modifying the built-in `values.yaml` file directly, you can easily customize your WordPress Helm chart deployment. This flexibility allows you to tailor the deployment to your specific needs and avoid using the default values set in the chart.

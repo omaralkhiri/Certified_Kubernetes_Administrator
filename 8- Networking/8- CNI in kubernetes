@@ -1,0 +1,119 @@
+# Kubernetes CNI (Container Network Interface) Documentation
+
+## Overview
+
+The Container Network Interface (CNI) is a crucial component in Kubernetes that enables networking between containers, pods, and external services. This documentation explains how Kubernetes implements CNI to manage container networking.
+
+## Prerequisites
+
+Before understanding CNI in Kubernetes, it's important to grasp:
+- Network namespaces fundamentals
+- Docker networking implementation
+- The need for standardized container networking
+- The evolution of CNI as a standard
+- Available CNI plugins and their capabilities
+
+## CNI Responsibilities in Kubernetes
+
+In Kubernetes, CNI defines the responsibilities between the container runtime and network plugins:
+
+1. **Kubernetes (Container Runtime) Responsibilities**:
+   - Creating container network namespaces
+   - Identifying network namespaces
+   - Attaching namespaces to the correct network
+   - Invoking the appropriate network plugin after container creation
+
+2. **Network Plugin Responsibilities**:
+   - Configuring the network interface
+   - IP address management
+   - Establishing network connectivity
+
+## CNI Implementation in Kubernetes
+
+### Container Runtime Integration
+
+The component responsible for creating containers in Kubernetes is the container runtime. Common examples include:
+
+- **containerd**: The current standard container runtime in Kubernetes
+- **CRI-O**: A lightweight alternative designed specifically for Kubernetes
+
+Note: Docker was the original runtime but was later replaced by containerd for better abstraction.
+
+### Plugin Configuration
+
+Kubernetes configures CNI plugins through two main directories:
+
+1. **Plugin Binaries Directory**: `/opt/cni/bin`
+   - Contains all installed CNI plugins as executable files
+   - Includes plugins like:
+     - `bridge` (basic bridge networking)
+     - `dhcp` (DHCP-based IP allocation)
+     - `flannel` (popular overlay network plugin)
+     - And many others
+
+2. **Configuration Directory**: `/etc/cni/net.d/`
+   - Contains configuration files that define which plugins to use and how
+   - May include multiple configuration files
+   - The container runtime selects the configuration file alphabetically if multiple exist
+
+### Configuration File Example
+
+A typical CNI configuration file (e.g., `bridge.conf`) follows the CNI standard format:
+
+```json
+{
+  "name": "myNet",
+  "type": "bridge",
+  "bridge": "myBridge",
+  "isGateway": true,
+  "ipMasq": true,
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.22.0.0/16",
+    "routes": [
+      { "dst": "0.0.0.0/0" }
+    ]
+  }
+}
+```
+
+#### Configuration Parameters
+
+1. **Basic Network Configuration**:
+   - `name`: Identifier for the network
+   - `type`: Specifies the CNI plugin to use (e.g., "bridge")
+
+2. **Bridge-Specific Parameters**:
+   - `bridge`: Name of the bridge interface to create/use
+   - `isGateway`: Whether the bridge interface should get an IP address to act as a gateway
+   - `ipMasq`: Whether to add NAT rules for IP masquerading
+
+3. **IP Address Management (IPAM)**:
+   - `type`: IPAM plugin type (e.g., "host-local" or "dhcp")
+     - `host-local`: IP addresses are managed locally on the host
+     - `dhcp`: Uses an external DHCP server for IP allocation
+   - `subnet`: IP range to assign to pods
+   - `routes`: Network routes to configure
+
+## How Kubernetes Uses CNI
+
+1. When Kubernetes creates a pod:
+   - The container runtime creates the network namespace
+   - The runtime looks in `/etc/cni/net.d/` for configuration
+   - Executes the appropriate plugin from `/opt/cni/bin/`
+   - The plugin configures the network according to the specifications
+
+2. For multiple configurations:
+   - The runtime selects the first file alphabetically
+   - This allows for prioritized network configurations
+
+## Conclusion
+
+Kubernetes leverages CNI to provide flexible, plugin-based networking for containers. By separating concerns between the container runtime and network plugins, CNI enables:
+
+- Standardized networking across different environments
+- Choice between various networking solutions
+- Consistent configuration through well-defined interfaces
+- Extensibility through additional plugins
+
+For practical implementation, refer to the practice exercises to gain hands-on experience with CNI configuration in Kubernetes.

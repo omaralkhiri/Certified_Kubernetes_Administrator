@@ -1,0 +1,120 @@
+### Documentation: Scheduler Profiles in Kubernetes
+
+#### Introduction to Kubernetes Scheduling
+
+In Kubernetes, the scheduling of pods to nodes is a complex process. The scheduler ensures that pods are assigned to appropriate nodes based on resource requirements, node affinity, and other factors. By default, Kubernetes uses a single scheduler (`kube-scheduler`) to handle pod placement. However, there are situations where you may need to deploy multiple schedulers or customize the default scheduler's behavior. 
+
+One of the features introduced in Kubernetes 1.18 is the ability to define **scheduler profiles** within a single scheduler binary. This allows you to run multiple scheduler profiles with different configurations and plugin behaviors, without the need to deploy multiple scheduler processes. This feature enables you to customize the scheduling process for different workloads within the same Kubernetes cluster.
+
+#### How Kubernetes Scheduler Works
+
+Let’s walk through how the default Kubernetes scheduler works by using a simple example. Consider a scenario where we have four nodes in the cluster, and a pod is waiting to be scheduled on one of them. The pod has a resource requirement of **10 CPU**. The available CPU resources on the four nodes are as follows:
+
+| Node  | Available CPU |
+|-------|---------------|
+| Node 1| 8 CPU         |
+| Node 2| 6 CPU         |
+| Node 3| 15 CPU        |
+| Node 4| 10 CPU        |
+
+At this point, the pod has been created but is waiting to be scheduled. It enters a **scheduling queue** where it waits for resources. 
+
+#### Scheduling Process Phases
+
+The Kubernetes scheduler performs the scheduling of pods in the following phases:
+
+1. **Priority Sorting**: Pods are first sorted based on their priority. In Kubernetes, you can assign a **PriorityClass** to a pod. Pods with higher priority will be placed at the beginning of the scheduling queue. For instance, a pod with a high priority (e.g., priority class value `1000000`) will be scheduled before others with lower priority.
+
+   - **Priority Class** example:
+     ```yaml
+     apiVersion: scheduling.k8s.io/v1
+     kind: PriorityClass
+     metadata:
+       name: high-priority
+     value: 1000000
+     globalDefault: false
+     description: "This priority class is for critical workloads."
+     ```
+
+2. **Filtering**: Once sorted by priority, the scheduler proceeds to **filtering**. During this phase, nodes that cannot run the pod due to resource constraints or other reasons (e.g., taints, affinity) are filtered out. For example, nodes that do not have sufficient CPU (e.g., nodes 1 and 2 in our example) are excluded.
+
+3. **Scoring**: After filtering, the remaining nodes are evaluated in the **scoring** phase. Each node is assigned a score based on available resources. Nodes that can accommodate the pod's resource requirements are scored, and the node with the highest score is selected. For example, if Node 3 has 15 CPU available, it may be given a higher score than Node 4 with only 10 CPU remaining.
+
+4. **Binding**: Finally, the pod is bound to the node with the highest score in the **binding** phase. The pod is then scheduled to that node.
+
+#### Scheduler Plugins and Extension Points
+
+The Kubernetes scheduler is highly extensible and works with a set of **plugins** that enable customization at each stage of the scheduling process. These plugins are designed to interact with specific **extension points** during the scheduling process:
+
+1. **QueueSort**: This extension sorts pods in the scheduling queue by priority. The plugin used here is `PrioritySort`, which ensures that pods with higher priority are scheduled first.
+
+2. **Filter**: The filter extension point is responsible for filtering out nodes that are not suitable for running a pod. For example, the `NodeResourcesFit` plugin ensures that a node has enough resources to run the pod, while the `NodeName` plugin checks if the pod has a specified node name and filters out nodes that do not match.
+
+3. **Score**: In the scoring phase, plugins such as `ImageLocality` are used to assign higher scores to nodes that already have the container image for the pod.
+
+4. **Bind**: The binding phase involves the actual placement of the pod on a node. The `DefaultBinder` plugin is responsible for binding the pod to a node after the scheduling process is complete.
+
+Additional extension points include:
+- **PreFilter**: Executed before the filter phase.
+- **PostFilter**: Executed after the filter phase.
+- **PreScore**: Executed before the scoring phase.
+- **Reserve**: Executed after scoring to reserve resources.
+- **Permit**: Used to delay binding until certain conditions are met.
+- **PreBind** and **PostBind**: Executed before and after binding, respectively.
+
+Each extension point allows for specific plugins to be executed at the right time during the scheduling process, and Kubernetes provides the flexibility to add custom plugins to any of these extension points.
+
+#### Scheduler Profiles: A New Approach in Kubernetes 1.18
+
+With the release of Kubernetes 1.18, a new feature was introduced that allows multiple **scheduler profiles** to be configured within a single scheduler. Prior to this, if you wanted to run multiple schedulers with different behaviors, you needed to deploy separate scheduler processes. The new **scheduler profiles** feature allows for multiple profiles in a single binary, simplifying maintenance and preventing race conditions between separate scheduler processes.
+
+##### Configuring Scheduler Profiles
+
+Scheduler profiles are defined in the scheduler configuration file. Each profile specifies a unique scheduler name and can have a different configuration for plugins and extension points. Here's an example of how multiple profiles can be defined in the `kube-scheduler` configuration file:
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: KubeSchedulerConfiguration
+profiles:
+  - schedulerName: default-scheduler
+    plugins:
+      filter:
+        - Name: "NodeResourcesFit"
+        - Name: "NodeName"
+      score:
+        - Name: "ImageLocality"
+  - schedulerName: my-scheduler
+    plugins:
+      filter:
+        - Name: "NodeResourcesFit"
+      score:
+        - Name: "ImageLocality"
+        - Name: "TaintToleration"
+  - schedulerName: my-scheduler-2
+    plugins:
+      filter:
+        - Name: "NodeResourcesFit"
+      score: []
+      bind:
+        - Name: "CustomBinder"
+```
+
+In this example:
+- **`default-scheduler`** uses the `NodeResourcesFit` and `NodeName` plugins for filtering and `ImageLocality` for scoring.
+- **`my-scheduler`** has a different configuration, where `NodeResourcesFit` is used for filtering, and additional plugins like `TaintToleration` are enabled in the scoring phase.
+- **`my-scheduler-2`** disables scoring plugins and uses a custom binder in the binding phase.
+
+By specifying different profiles, you can tailor the scheduler behavior to meet the needs of specific workloads within the same cluster.
+
+#### Benefits of Scheduler Profiles
+
+- **Simplified Management**: You no longer need to manage separate scheduler processes. Multiple profiles can be configured in a single scheduler binary.
+- **Avoid Race Conditions**: Since all profiles are part of a single process, you prevent race conditions where multiple schedulers could attempt to schedule workloads on the same node simultaneously.
+- **Customization**: You can customize plugin behavior for each scheduler profile. For example, one profile can have a custom binder plugin, while another profile can focus on resource constraints.
+
+#### Conclusion
+
+Scheduler profiles provide a powerful and flexible way to run multiple schedulers within a Kubernetes cluster without needing separate binaries. You can define different behaviors for different workloads by configuring custom plugins for filtering, scoring, and binding. This feature enhances the extensibility of Kubernetes scheduling, making it easier to manage complex scheduling requirements for different applications.
+
+For further details on this feature, check out the [Kubernetes Enhancement Proposal](https://github.com/kubernetes/enhancements/pull/1451) (KEP-1451) that introduced scheduler profiles.
+

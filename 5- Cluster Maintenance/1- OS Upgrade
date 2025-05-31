@@ -1,0 +1,60 @@
+### Node Maintenance in Kubernetes: Draining, Cordoning, and Uncordoning
+
+When maintaining a Kubernetes cluster, scenarios may arise where you need to take nodes offline for tasks such as software upgrades or applying security patches. This document outlines the options available to handle such cases and ensures minimal disruption to your applications.
+
+---
+
+#### **Behavior of Nodes and Pods During Downtime**
+1. **Node Downtime Impact**:
+   - When a node goes offline, the pods running on it become inaccessible.
+   - **Pods with Replicas**:
+     - If the affected pods belong to a replica set, other replicas continue serving traffic. Users experience minimal or no disruption.
+   - **Pods Without Replicas**:
+     - Single-instance pods are lost, impacting the associated application.
+
+2. **Kubernetes' Handling of Offline Nodes**:
+   - If the node recovers within **five minutes**, Kubernetes restores the pods on it.
+   - If the downtime exceeds **five minutes**, Kubernetes considers the pods "dead":
+     - Pods from a **replica set** are recreated on other nodes.
+     - Standalone pods are not restored.
+
+---
+
+#### **Recommended Maintenance Approach**
+Since node recovery time is unpredictable, it is safer to prepare for maintenance by moving workloads from the affected node to others.
+
+1. **Draining a Node**:
+   - Draining gracefully terminates pods on a node and recreates them on other nodes.
+   - The node is marked as **unschedulable**, preventing any new pods from being scheduled on it.
+   - Command:
+     ```bash
+     kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
+     ```
+   - The `--ignore-daemonsets` flag ensures that DaemonSet-managed pods are not affected.
+   - The `--delete-emptydir-data` flag removes pods that use emptyDir volumes.
+
+2. **Rebooting and Reintroducing the Node**:
+   - After maintenance, when the node is back online, it remains unschedulable.
+   - To allow scheduling of new pods on it, uncordon the node:
+     ```bash
+     kubectl uncordon <node-name>
+     ```
+
+---
+
+#### **Alternative: Cordoning a Node**
+- Cordoning marks a node as unschedulable without terminating existing pods.
+- Useful for situations where you want to prevent new workloads but do not wish to disrupt current ones.
+- Command:
+  ```bash
+  kubectl cordon <node-name>
+  ```
+
+---
+
+#### **Key Points to Remember**:
+1. Draining a node ensures that workloads are safely recreated on other nodes.
+2. Pods do not automatically move back to the original node after uncordoning. New pods or recreated ones may be scheduled on it.
+3. Use cordoning for non-disruptive maintenance when immediate workload movement is unnecessary.
+
+By following these practices, you can maintain cluster health and ensure minimal application downtime during node maintenance tasks.

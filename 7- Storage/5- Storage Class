@@ -1,0 +1,111 @@
+# Understanding Storage Classes in Kubernetes
+
+## Overview
+In Kubernetes, managing persistent storage for applications involves creating Persistent Volumes (PVs) and Persistent Volume Claims (PVCs). Previously, we manually provisioned storage resources and created PVs before they could be claimed by PVCs. This process, known as **static provisioning**, requires pre-creating storage disks and defining PV objects manually. However, with the introduction of **Storage Classes**, Kubernetes simplifies this process by enabling **dynamic provisioning** of volumes.
+
+## Static Provisioning
+Static provisioning involves:
+1. Manually creating a disk on the cloud provider (e.g., Google Cloud).
+2. Defining a Persistent Volume (PV) using the same name as the manually created disk.
+3. Binding the PV to a PVC and using it in pod definition files as a volume.
+
+### Limitations:
+- Time-consuming: Each application requiring storage necessitates manual provisioning of disks and PVs.
+- Prone to human errors.
+
+## Dynamic Provisioning with Storage Classes
+Dynamic provisioning eliminates manual storage management by automatically creating and binding PVs based on PVC requests. This is achieved using **Storage Classes**.
+
+### How it Works:
+1. A **StorageClass** object is created with:
+   - `apiVersion: storage.k8s.io/v1`
+   - A name for the storage class.
+   - A provisioner (e.g., `kubernetes.io/gce-pd` for Google Cloud Persistent Disk).
+2. The PVC references the StorageClass by specifying its name.
+3. When a PVC is created, Kubernetes:
+   - Uses the StorageClass to dynamically provision a new disk (e.g., on Google Cloud).
+   - Automatically creates and binds a PV to the PVC.
+
+### Benefits:
+- Automation: Disks and PVs are provisioned without manual intervention.
+- Flexibility: Storage can be customized using parameters specific to the provisioner.
+- Scalability: Easily manage storage for multiple applications with varying requirements.
+
+## StorageClass Parameters
+Each provisioner supports specific parameters to customize storage. For example:
+- **Google Cloud Persistent Disk (`kubernetes.io/gce-pd`):**
+  - `type`: Disk type, e.g., `standard` or `ssd`.
+  - `replication-type`: Options include `none` or `regional-pd`.
+- **AWS EBS (`kubernetes.io/aws-ebs`):**
+  - `type`: Disk type, e.g., `gp2`, `io1`.
+  - `iopsPerGB`: Number of IOPS per GB.
+
+StorageClasses enable creating different service levels or tiers, such as:
+- **Silver Class:** Standard disks.
+- **Gold Class:** SSD disks.
+- **Platinum Class:** SSD disks with replication.
+
+## Example Configuration
+### Storage Class Definition
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gold-class
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: ssd
+  replication-type: regional-pd
+```
+
+### PVC Definition
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-app-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: gold-class
+```
+
+### Pod Definition
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app-pod
+spec:
+  containers:
+    - name: my-app
+      image: nginx
+      volumeMounts:
+        - mountPath: "/data"
+          name: storage-volume
+  volumes:
+    - name: storage-volume
+      persistentVolumeClaim:
+        claimName: my-app-pvc
+```
+
+### Workflow:
+1. The **PVC** (`my-app-pvc`) requests 10Gi of storage using the `gold-class` StorageClass.
+2. The `gold-class` StorageClass provisions a regional SSD disk on Google Cloud.
+3. Kubernetes creates a **PV** bound to the **PVC**.
+4. The pod (`my-app-pod`) uses the PVC as its volume.
+
+## Supported Provisioners
+Kubernetes supports various provisioners for different cloud providers and storage solutions, such as:
+- Google Cloud Persistent Disk (`kubernetes.io/gce-pd`)
+- AWS Elastic Block Store (`kubernetes.io/aws-ebs`)
+- Azure Disk (`kubernetes.io/azure-disk`)
+- Azure File (`kubernetes.io/azure-file`)
+- NFS, CephFS, Portworx, ScaleIO, etc.
+
+## Conclusion
+By using Storage Classes, Kubernetes simplifies the provisioning and management of persistent storage. With dynamic provisioning, users can focus on application development without worrying about manual disk and PV creation. Different Storage Classes can cater to varying performance and availability needs, making Kubernetes a flexible platform for managing storage.
+

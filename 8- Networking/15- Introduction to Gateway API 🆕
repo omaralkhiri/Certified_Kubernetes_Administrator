@@ -1,0 +1,169 @@
+# **Gateway API: The Next Generation of Kubernetes Ingress**
+
+## **Introduction**
+The Kubernetes **Ingress** resource has been the standard for managing external access to services within a cluster. However, as Kubernetes adoption grows, Ingress has shown limitations in **multi-tenancy**, **flexibility**, and **advanced routing configurations**. 
+
+The **Gateway API** is an official Kubernetes project designed to address these limitations, providing a more **structured**, **extensible**, and **multi-tenant-friendly** approach to Layer 4 (L4) and Layer 7 (L7) routing.
+
+---
+
+## **Limitations of Ingress**
+### **1. Multi-Tenancy Challenges**
+- Ingress resources are **shared** across services, leading to potential conflicts when multiple teams or organizations manage different services.
+- Example:  
+  - **Team A** manages a `wear` service.  
+  - **Team B** manages a `video` service.  
+  - Both teams must coordinate changes to a **single Ingress resource**, leading to operational overhead.
+
+### **2. Limited Rule Configuration**
+- Ingress **only supports HTTP-based rules** (e.g., path matching, host-based routing).
+- Advanced features like **TCP/UDP routing, traffic splitting, header manipulation, authentication, and rate limiting** are **not natively supported** and require **controller-specific annotations**.
+
+### **3. Controller-Specific Annotations**
+- Ingress relies on **annotations** to pass configurations to underlying controllers (e.g., Nginx, Traefik).
+- Example:
+  ```yaml
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: "auth-middleware"
+  ```
+  - These configurations are **not validated by Kubernetes**.
+  - They are **tied to a specific controller**, making migrations difficult.
+
+---
+
+## **Gateway API: A Modern Solution**
+Gateway API introduces a **structured, role-based** approach to routing, with **three primary personas**:
+
+| Persona | Role | Manages |
+|---------|------|---------|
+| **Infrastructure Provider** | Defines available gateway types | `GatewayClass` |
+| **Cluster Operator** | Deploys and configures gateways | `Gateway` |
+| **Application Developer** | Defines routing rules | `HTTPRoute`, `TCPRoute`, etc. |
+
+### **1. GatewayClass**
+Defines the **type of Gateway** (e.g., Nginx, Traefik, Istio) that can be deployed.
+
+#### **Example:**
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: example-class
+spec:
+  controllerName: example.com/gateway-controller
+```
+
+### **2. Gateway**
+An **instance** of a `GatewayClass`, representing a load balancer or proxy.
+
+#### **Example:**
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-gateway
+spec:
+  gatewayClassName: example-class
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+```
+
+### **3. HTTPRoute (and other Route Types)**
+Defines **how traffic is routed** to backend services.
+
+#### **Example:**
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: example-http-route
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames: ["www.example.com"]
+  rules:
+    - matches:
+        - path:
+            value: "/login"
+      backendRefs:
+        - name: example-svc
+          port: 8080
+```
+
+---
+
+## **Advantages Over Ingress**
+### **1. Native Support for Advanced Routing**
+- **Layer 4 (TCP/UDP) & Layer 7 (HTTP, gRPC) routing**.
+- **Traffic splitting, header manipulation, authentication, rate limiting** are **first-class citizens** (no annotations needed).
+
+### **2. Declarative & Portable Configurations**
+- **No controller-specific annotations** → Works across implementations.
+- Example (Traffic Splitting):
+  ```yaml
+  rules:
+    - backendRefs:
+        - name: app-v1
+          weight: 80
+        - name: app-v2
+          weight: 20
+  ```
+
+### **3. Improved Multi-Tenancy**
+- **Separation of concerns** between infrastructure providers, cluster operators, and application developers.
+- Teams can **manage their own routes** without conflicts.
+
+### **4. Better TLS & Security Handling**
+- **Native TLS termination** without relying on annotations.
+  ```yaml
+  listeners:
+    - name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: example-tls-secret
+  ```
+
+---
+
+## **Gateway API Implementations**
+Most major Kubernetes ingress controllers **already support Gateway API**:
+
+| **Controller** | **Status** |
+|----------------|-----------|
+| Amazon EKS     | GA ✅ |
+| Azure Application Gateway | GA ✅ |
+| Contour        | GA ✅ |
+| Envoy Gateway  | GA ✅ |
+| Google Kubernetes Engine (GKE) | GA ✅ |
+| HAProxy Ingress | GA ✅ |
+| Istio          | GA ✅ |
+| Kong           | GA ✅ |
+| Nginx          | GA ✅ |
+| Traefik        | GA ✅ |
+
+---
+
+## **Conclusion**
+The **Gateway API** is the **future of Kubernetes traffic management**, solving key limitations of Ingress:
+✅ **Better multi-tenancy** (separate roles for infra, ops, and devs).  
+✅ **Native support for advanced routing** (TCP, gRPC, traffic splitting).  
+✅ **No controller-specific annotations** → portable configurations.  
+✅ **First-class TLS & security handling**.  
+
+Migrating from Ingress to Gateway API is **recommended** for teams needing **scalability, flexibility, and better security** in Kubernetes networking.
+
+---
+
+### **Next Steps**
+- Explore [Gateway API Documentation](https://gateway-api.sigs.k8s.io/)
+- Check if your **ingress controller supports Gateway API**.
+- Start migrating **simple routes first**, then adopt advanced features.
+
+🚀 **Upgrade to Gateway API today for a better Kubernetes networking experience!**
+🚀 **Upgrade to Gateway API today for a better Kubernetes networking experience!**

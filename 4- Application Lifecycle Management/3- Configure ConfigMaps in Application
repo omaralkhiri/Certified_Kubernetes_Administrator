@@ -1,0 +1,90 @@
+### Corrected Documentation on Environment Variables and Config Maps in Kubernetes
+
+#### Setting Environment Variables in Kubernetes Pod Definition Files
+In Kubernetes, you can define environment variables within the pod definition file by using the `env` property. The `env` property is an array where each item begins with a dash (`-`) and contains `name` and `value` fields:
+- **`name`**: Specifies the name of the environment variable accessible within the container.
+- **`value`**: Specifies the corresponding value for the environment variable.
+
+This method allows for a straightforward definition of environment variables using key-value pairs.
+
+#### Alternative Methods: Using Config Maps and Secrets
+Instead of directly specifying values in the pod definition file, you can use **ConfigMaps** or **Secrets**. These methods allow you to manage environment variables centrally:
+- **ConfigMaps**: Store configuration data as key-value pairs.
+- **Secrets**: Securely store sensitive data like passwords and API keys.
+
+By using `valueFrom` instead of `value`, you can reference ConfigMaps or Secrets in your pod definitions.
+
+---
+
+### Working with ConfigMaps in Kubernetes
+
+#### Why Use ConfigMaps?
+Managing environment variables directly in pod definition files becomes challenging as the number of pods grows. ConfigMaps centralize configuration management, making it easier to update and reuse configuration data across multiple pods.
+
+#### Steps to Use ConfigMaps
+1. **Create the ConfigMap**: 
+   - Use either the imperative or declarative method.
+2. **Inject the ConfigMap into the Pod**: 
+   - Make the data available to the pod via environment variables or files.
+
+---
+
+### Creating ConfigMaps
+
+#### Imperative Method
+To create a ConfigMap without a definition file, use the `kubectl create configmap` command:
+- **Inline Key-Value Pair**: Use the `--from-literal` option to specify key-value pairs directly.
+  ```bash
+  kubectl create configmap app-config --from-literal=appColor=blue
+  ```
+- **From File**: Use the `--from-file` option to read key-value pairs from a file.
+  ```bash
+  kubectl create configmap app-config --from-file=config.txt
+  ```
+
+#### Declarative Method
+To use a definition file:
+1. Create a YAML file with the following structure:
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: app-config
+   data:
+     appColor: blue
+   ```
+2. Apply the configuration:
+   ```bash
+   kubectl apply -f configmap.yaml
+   ```
+
+---
+
+### Viewing ConfigMaps
+- **List ConfigMaps**:
+  ```bash
+  kubectl get configmaps
+  ```
+- **Describe ConfigMap**:
+  ```bash
+  kubectl describe configmap app-config
+  ```
+
+---
+
+### Injecting ConfigMaps into Pods
+
+1. **Using Environment Variables**:
+   Add the `envFrom` property in the pod definition file:
+   ```yaml
+   envFrom:
+   - configMapRef:
+       name: app-config
+   ```
+2. **Using Volumes**:
+   Inject the ConfigMap data as a file by mounting it as a volume.
+
+---
+
+### Summary
+ConfigMaps are a powerful feature in Kubernetes for centralizing and managing configuration data. They enable dynamic updates and reusable configurations across your cluster. Practice creating, injecting, and troubleshooting ConfigMaps through coding exercises to master their use in Kubernetes environments.

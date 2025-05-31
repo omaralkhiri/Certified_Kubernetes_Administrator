@@ -1,0 +1,228 @@
+# Customizing Kubernetes Configurations with Kustomize: A Guide
+
+## Introduction
+In this guide, we will explore how to use **Kustomize** to manage Kubernetes configurations for different environments. The primary use case of **Kustomize** is to take a base Kubernetes configuration and customize it on a per-environment basis. For instance, if you have a **development**, **staging**, and **production** environment, you may want to tweak certain configurations for each. **Kustomize** provides a way to handle these changes in a structured and efficient manner using **overlays**.
+
+## Understanding the Folder Structure
+
+When working with **Kustomize**, your project directory is typically divided into two main sections:
+
+1. **Base Configuration**: This folder contains shared configurations that apply to all environments. It holds the default Kubernetes configurations that will be used across different environments.
+   
+2. **Overlays**: This folder contains environment-specific configurations. Each environment (such as development, staging, production) will have its own overlay folder, and you can apply environment-specific changes to the base configuration in these overlays.
+
+Here is the typical structure of a **Kustomize** project:
+
+```
+/k8s
+  ├── base/
+  │   ├── nginx-deployment.yaml
+  │   └── kustomization.yaml
+  └── overlays/
+      ├── dev/
+      │   └── kustomization.yaml
+      ├── staging/
+      │   └── kustomization.yaml
+      └── production/
+          └── kustomization.yaml
+```
+
+### Base Folder
+The **base** folder contains the common configuration shared across all environments. For example, a file like `nginx-deployment.yaml` might define a Kubernetes deployment, with a setting such as the number of replicas. In this base configuration, the number of replicas might be set to **1** by default.
+
+### Overlays Folder
+The **overlays** folder contains environment-specific configurations. Each environment folder (e.g., **dev**, **staging**, **production**) will have its own **`kustomization.yaml`** file, where changes specific to that environment are defined.
+
+---
+
+## Key Concepts
+
+### Base Configuration
+The **base** folder contains the default Kubernetes resources that will be shared across all environments. You create a **`kustomization.yaml`** file inside this base folder to specify which resources to include.
+
+### Overlays
+An **overlay** folder allows you to define environment-specific changes. Each environment has a **`kustomization.yaml`** file, which imports the base configuration and applies patches to modify resources according to the needs of that environment. Overlays allow you to specify different values for properties like the number of replicas or resource limits for different environments.
+
+---
+
+## How to Set Up Overlays
+
+### 1. Define the Base Configuration
+
+Let's start by creating a **base** configuration. In this example, we have a file called `nginx-deployment.yaml` where we define a Kubernetes deployment with the number of replicas set to **1**.
+
+**`nginx-deployment.yaml`** (Base):
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+```
+
+Next, define a **`kustomization.yaml`** in the **base** folder. This file will import the `nginx-deployment.yaml` file.
+
+**`kustomization.yaml`** (Base):
+```yaml
+resources:
+  - nginx-deployment.yaml
+```
+
+### 2. Define Overlays for Different Environments
+
+Each environment (dev, staging, production) has its own folder with a **`kustomization.yaml`** file that imports the base configuration and applies patches specific to that environment.
+
+#### Development Environment
+
+For the development environment, we want to change the **replicas** to **2**. We do this by defining a **patch**.
+
+**`kustomization.yaml`** (Development Overlay):
+```yaml
+bases:
+  - ../../base
+
+patchesStrategicMerge:
+  - replicas-patch.yaml
+```
+
+**`replicas-patch.yaml`** (Development Patch):
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 2
+```
+
+#### Staging Environment
+
+For the staging environment, the **replicas** might be set to **3**. Similarly, we create a patch for this environment.
+
+**`kustomization.yaml`** (Staging Overlay):
+```yaml
+bases:
+  - ../../base
+
+patchesStrategicMerge:
+  - replicas-patch.yaml
+```
+
+**`replicas-patch.yaml`** (Staging Patch):
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+```
+
+#### Production Environment
+
+In the production environment, we may want to introduce new resources (like a **Grafana** deployment) in addition to the modified **nginx-deployment**.
+
+**`kustomization.yaml`** (Production Overlay):
+```yaml
+bases:
+  - ../../base
+
+patchesStrategicMerge:
+  - replicas-patch.yaml
+
+resources:
+  - grafana-deployment.yaml
+```
+
+**`replicas-patch.yaml`** (Production Patch):
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 4
+```
+
+**`grafana-deployment.yaml`** (New Resource in Production):
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+```
+
+---
+
+## Additional Notes
+
+### 1. Flexibility in Directory Structure
+
+**Kustomize** provides a lot of flexibility in how you structure your directories. You can break down the **base** or **overlays** into further subdirectories based on features or any other logical structure that makes sense for your project. 
+
+For instance, the **base** folder could contain additional subdirectories for different types of resources (e.g., **services**, **deployments**, **ingresses**), and the same approach can be used for the **overlays**.
+
+Example:
+
+```
+/k8s
+  ├── base/
+  │   ├── deployments/
+  │   │   └── nginx-deployment.yaml
+  │   └── kustomization.yaml
+  └── overlays/
+      ├── dev/
+      │   └── kustomization.yaml
+      ├── staging/
+      │   └── kustomization.yaml
+      └── production/
+          └── kustomization.yaml
+```
+
+### 2. New Resources in Overlays
+
+In addition to patching existing resources, you can add entirely new resources in the **overlay** folders. For instance, in the production overlay, we added a new **Grafana** deployment that is not present in the base configuration. This allows you to introduce new resources for specific environments without modifying the base configurations.
+
+### 3. Path to Base Directory in Overlays
+
+In each **overlay** folder, you specify the relative path to the **base** folder using the `bases` property. This tells **Kustomize** where to find the base configurations to apply the necessary patches.
+
+Example:
+```yaml
+bases:
+  - ../../base
+```
+
+The path `../../base` indicates that **Kustomize** should look for the base folder two directories up from the current **overlay** folder.
+
+---
+
+## Conclusion
+
+Using **Kustomize**, you can easily manage Kubernetes configurations across different environments by using **overlays**. This approach allows you to maintain a clean, DRY (Don't Repeat Yourself) structure while still applying environment-specific customizations. With flexibility in how you organize your files and the ability to add new resources in overlays, **Kustomize** helps you manage complex configurations in a modular way.
+

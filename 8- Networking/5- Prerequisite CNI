@@ -1,0 +1,131 @@
+# **Container Networking Interface (CNI) Documentation**
+
+## **1. Introduction**
+The **Container Networking Interface (CNI)** is a standard for configuring network interfaces in Linux containers. It provides a framework for dynamically configuring networking resources when containers are created or deleted. CNI ensures interoperability between different container runtimes (like Kubernetes, rkt, and Mesos) and networking plugins (such as bridge, flannel, Calico, and Cilium).
+
+## **2. Background: Network Namespaces and Container Networking**
+Before CNI, container runtimes manually handled networking by:
+- Creating isolated **network namespaces** for containers.
+- Establishing virtual network connections using **virtual Ethernet (veth) pairs**.
+- Connecting containers via **Linux bridges**.
+- Assigning **IP addresses** and configuring **routes**.
+- Enabling **NAT (Network Address Translation)** for external communication.
+
+Different container runtimes (Docker, rkt, Kubernetes) implemented similar networking logic with minor differences. CNI was introduced to standardize this process.
+
+## **3. What is CNI?**
+CNI is a **specification** that defines:
+- How **network plugins** should be developed.
+- How **container runtimes** should invoke these plugins.
+- A **JSON-based configuration format** for network settings.
+
+### **Key Goals of CNI**
+- **Standardization**: Allow any CNI-compatible plugin to work with any CNI-compatible runtime.
+- **Modularity**: Enable different networking solutions (bridge, overlay, SDN) to integrate seamlessly.
+- **Simplicity**: Keep the interface minimal while supporting complex networking needs.
+
+## **4. CNI Components**
+### **A. Container Runtime Responsibilities**
+The container runtime must:
+1. **Create a network namespace** for each container.
+2. **Identify networks** the container should join.
+3. **Invoke CNI plugins** with the correct commands:
+   - `ADD`: Configure networking when a container starts.
+   - `DEL`: Clean up networking when a container stops.
+   - `CHECK` (optional): Verify network configuration.
+4. **Pass required parameters** to plugins, including:
+   - Container ID.
+   - Network namespace path.
+   - Network configuration (JSON).
+
+### **B. Plugin Responsibilities**
+A CNI plugin must:
+1. **Support `ADD`, `DEL`, and `CHECK` commands**.
+2. **Attach interfaces** to the container’s network namespace.
+3. **Assign IP addresses** (using built-in or external IPAM plugins).
+4. **Configure routes** for connectivity.
+5. **Return results** in a standardized format (e.g., assigned IP, gateway, DNS).
+
+### **C. CNI Configuration File**
+A JSON file defines network settings:
+```json
+{
+  "cniVersion": "0.4.0",
+  "name": "mynetwork",
+  "type": "bridge",
+  "bridge": "cni0",
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.244.0.0/16"
+  }
+}
+```
+- `type`: Specifies the plugin (e.g., `bridge`, `flannel`).
+- `ipam`: Defines IP allocation (e.g., `host-local`, `dhcp`).
+
+## **5. CNI Plugins**
+### **Built-in Plugins**
+1. **Basic Connectivity**:
+   - `bridge`: Creates a Linux bridge for containers.
+   - `vlan`: Assigns VLAN tags.
+   - `ipvlan`: Uses IPVLAN for network isolation.
+   - `macvlan`: Assigns unique MAC addresses.
+   - `ptp`: Creates point-to-point links.
+   - `loopback`: Sets up loopback interfaces.
+
+2. **IP Address Management (IPAM)**:
+   - `host-local`: Assigns IPs from a predefined subnet.
+   - `dhcp`: Uses DHCP for IP allocation.
+
+### **Third-Party Plugins**
+- **Weave**: Overlay network with automatic mesh routing.
+- **Flannel**: Simple overlay networking for Kubernetes.
+- **Calico**: BGP-based networking with policy enforcement.
+- **Cilium**: eBPF-powered networking and security.
+- **VMware NSX**: Integrates with VMware SDN.
+
+## **6. CNI vs. Docker’s CNM**
+| Feature          | CNI (Container Networking Interface) | CNM (Container Network Model) |
+|------------------|--------------------------------------|--------------------------------|
+| **Developed By** | Cloud Native Computing Foundation (CNCF) | Docker |
+| **Used By**      | Kubernetes, rkt, Mesos | Docker (Swarm) |
+| **Plugins**      | Bridge, Flannel, Calico, etc. | Docker-native (bridge, overlay, macvlan) |
+| **Integration**  | Works with multiple runtimes | Docker-specific |
+| **IPAM**         | Separate IPAM plugins | Built-in IP management |
+
+**Note**: Docker does **not** natively support CNI. However, Kubernetes can use CNI plugins with Docker by:
+1. Creating Docker containers **without networking** (`--net=none`).
+2. Manually invoking CNI plugins to configure networking.
+
+## **7. How CNI Works in Kubernetes**
+Kubernetes uses CNI for pod networking:
+1. **Kubelet** (node agent) calls the CNI plugin when a pod is created.
+2. The plugin:
+   - Creates a **veth pair** (one end in pod, one on host).
+   - Attaches to a **bridge** (e.g., `cni0`).
+   - Assigns an **IP** (via `host-local` or DHCP).
+   - Sets up **routes** and **NAT** (if needed).
+3. When the pod is deleted, the plugin cleans up resources.
+
+Example flow:
+```bash
+# CNI plugin invocation (simplified)
+$ /opt/cni/bin/bridge add mycontainer /var/run/netns/myns
+```
+
+## **8. Advantages of CNI**
+✅ **Runtime Agnostic**: Works with Kubernetes, rkt, etc.  
+✅ **Extensible**: New plugins can be added without runtime changes.  
+✅ **Lightweight**: Minimal overhead, simple JSON config.  
+✅ **Community Support**: Widely adopted in cloud-native ecosystems.  
+
+## **9. Conclusion**
+CNI provides a **standardized, pluggable** approach to container networking. By decoupling networking logic from runtimes, it enables **flexibility** and **interoperability** across different platforms. While Docker uses its own model (CNM), CNI remains the **dominant standard** in Kubernetes and other cloud-native environments.
+
+---
+### **Further Reading**
+- [CNI GitHub Repository](https://github.com/containernetworking/cni)  
+- [Kubernetes Networking with CNI](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/)  
+- [Comparing CNI and CNM](https://www.dasblinkenlichten.com/understanding-cni-container-networking-interface/)  
+
+This documentation provides a comprehensive overview of CNI, its components, and its role in modern container networking. 🚀

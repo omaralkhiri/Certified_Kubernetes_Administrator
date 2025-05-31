@@ -1,0 +1,93 @@
+# Securing Your Kubernetes Cluster with TLS Certificates
+
+## Introduction
+In this document, we will discuss how to secure your Kubernetes cluster using TLS certificates. We will explore different types of certificates required, how they interact, and how they help secure communication within the cluster.
+
+## Recap of Public and Private Keys
+In the previous discussion, we covered the fundamentals of public and private keys. We learned how a server uses these keys to establish secure connectivity, referring to them as **Server Certificates**. We also discussed the concept of a **Certificate Authority (CA)**, which has its own set of public and private key pairs to sign Server Certificates. These are referred to as **Root Certificates**. Additionally, we learned about **Client Certificates**, which are used by servers to verify the identity of clients.
+
+Thus, the three main types of certificates are:
+- **Server Certificates**: Configured on servers
+- **Root Certificates**: Configured on the CA servers
+- **Client Certificates**: Configured on client systems
+
+## Naming Conventions for Certificates
+To avoid confusion, follow this naming convention:
+- Certificates with **public keys** typically have the `.crt` or `.pem` extension, such as `server.crt` or `client.pem`.
+- **Private keys** usually contain the word `key` in the filename or extension, such as `server.key` or `server-key.pem`.
+
+By following this convention, it is easy to distinguish between public and private keys in the system.
+
+## TLS in Kubernetes Cluster
+A Kubernetes cluster consists of multiple master and worker nodes. To ensure all interactions between services and clients are secure, communication must be encrypted using TLS.
+
+Two primary security requirements in a Kubernetes cluster:
+1. All services within the cluster must use **Server Certificates**.
+2. All clients must use **Client Certificates** to verify their identities.
+
+### Key Components and Their Certificates
+
+#### API Server
+The **Kubernetes API server** is a crucial component that exposes an HTTPS service for managing the cluster. It acts as a server and requires a **certificate and key pair** to secure communication.
+- **Certificate**: `apiserver.crt`
+- **Private Key**: `apiserver.key`
+
+#### etcd Server
+The **etcd server** stores all cluster data and also requires a certificate pair:
+- **Certificate**: `etcd-server.crt`
+- **Private Key**: `etcd-server.key`
+
+#### Kubelet
+Each worker node runs a **Kubelet service**, which exposes an HTTPS API endpoint. The API server communicates with the Kubelet service to manage worker nodes.
+- **Certificate**: `kubelet.crt`
+- **Private Key**: `kubelet.key`
+
+### Client Certificates in Kubernetes
+Clients need certificates to authenticate themselves to the Kubernetes API server. Below are the major client components and their certificates:
+
+#### Admin User
+Administrators interact with Kubernetes through **kubectl** or REST APIs, requiring authentication.
+- **Certificate**: `admin.crt`
+- **Private Key**: `admin.key`
+
+#### Scheduler
+The **scheduler** assigns pods to nodes and interacts with the API server as a client.
+- **Certificate**: `scheduler.crt`
+- **Private Key**: `scheduler.key`
+
+#### Controller Manager
+The **controller manager** is another client of the API server and requires authentication.
+- **Certificate**: `controller-manager.crt`
+- **Private Key**: `controller-manager.key`
+
+#### Kube Proxy
+The **Kube Proxy** interacts with the API server and requires authentication.
+- **Certificate**: `kube-proxy.crt`
+- **Private Key**: `kube-proxy.key`
+
+### Server-to-Server Communication
+Some server components also act as clients when communicating with other servers:
+- The **API server** communicates with the **etcd server**, requiring authentication.
+- The **API server** also talks to **Kubelet services** on worker nodes.
+
+The API server can either reuse its existing certificates or generate new ones for these specific purposes.
+
+## Organizing the Certificates
+To summarize, certificates in Kubernetes can be grouped into:
+1. **Client Certificates**: Used by clients like administrators, schedulers, controllers, and proxies to connect to the API server.
+2. **Server Certificates**: Used by servers like the API server, etcd, and Kubelet to authenticate their respective clients.
+
+## Generating Certificates
+A **Certificate Authority (CA)** is required to sign all certificates. Kubernetes requires at least one CA for the cluster. However, you can have multiple CAs:
+- One CA for all components in the cluster
+- A separate CA specifically for **etcd**
+
+For a single CA setup, the CA itself requires a certificate pair:
+- **Certificate**: `ca.crt`
+- **Private Key**: `ca.key`
+
+This CA is responsible for signing all other certificates in the cluster.
+
+## Conclusion
+By implementing TLS certificates in your Kubernetes cluster, you can ensure that all communications between components and clients are secure. Properly organizing and naming certificates helps in maintaining clarity and simplifies cluster management.
+

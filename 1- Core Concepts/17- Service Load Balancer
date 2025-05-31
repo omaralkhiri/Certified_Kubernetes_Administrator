@@ -1,0 +1,63 @@
+### Documentation:
+
+**Kubernetes Service Types: NodePort and LoadBalancer**
+
+In Kubernetes, services play a crucial role in exposing applications to other services or external traffic. Two commonly used service types for exposing applications to external users are **NodePort** and **LoadBalancer**.
+
+#### NodePort Service:
+
+The **NodePort** service is useful for making applications accessible externally through a port on every node in the Kubernetes cluster. When a **NodePort** service is created, it opens a specific high port on every worker node in the cluster, and any traffic sent to that port is forwarded to the appropriate pod.
+
+##### Characteristics of NodePort:
+
+- **External Accessibility**: External traffic can access the service using the IP address of any of the worker nodes and the assigned port.
+- **High Ports**: The service is exposed on a port between 30000 and 32767 by default.
+- **Access URLs**: Multiple node IPs with corresponding ports can be shared to users, but it results in multiple URL combinations.
+- **Pod Deployment**: Even if pods are only deployed on a subset of the nodes, they will still be accessible from all nodes' IPs on the designated port.
+
+Example:
+
+- If the voting app's pods are deployed only on nodes with IPs 70 and 71, users can still access the service through the node IPs and high ports of any node in the cluster.
+- URLs like `http://<Node-IP>:<NodePort>` can be used by external users to access the services, but this isn't user-friendly or scalable.
+
+#### LoadBalancer Service:
+
+The **LoadBalancer** service type is ideal for production environments, especially when running on supported cloud platforms. It provisions an external load balancer that can route traffic to the backend pods across all worker nodes. This eliminates the need to manually configure external load balancers like **HAProxy** or **NGINX**.
+
+##### Characteristics of LoadBalancer:
+
+- **Cloud Integration**: Works seamlessly with cloud providers like **Google Cloud**, **AWS**, and **Azure**, which provision a native external load balancer.
+- **Single URL**: With a load balancer, you can configure a single external URL (e.g., **votingapp.com**) to access the application, making it user-friendly and scalable.
+- **Automatic Routing**: The cloud's load balancer automatically handles the routing of external traffic to the right pods in the cluster, simplifying configuration and maintenance.
+  
+##### When to Use LoadBalancer:
+
+- When you want to simplify your infrastructure and avoid manually setting up and maintaining an external load balancer.
+- When you're deploying to a supported cloud platform that integrates with Kubernetes for provisioning load balancers.
+- Ideal for production use cases where a single, stable URL is required for external users.
+
+##### Configuration:
+
+To switch a front-end service to use the **LoadBalancer** type, you simply define the service type in the Kubernetes service definition:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: frontend
+```
+
+#### Key Points:
+
+- **NodePort** is a simpler but less user-friendly option, where external traffic is routed through a port on every node.
+- **LoadBalancer** simplifies external access by creating a single stable URL for users and integrates with cloud platforms' native load balancers.
+- LoadBalancer services are best suited for cloud environments (Google Cloud, AWS, Azure), while **NodePort** can be used in non-cloud environments or for testing purposes.
+
+In the next demonstration, we will see how this works in practice when deploying applications to supported cloud platforms like **GCP**, **AWS**, or **Azure**.

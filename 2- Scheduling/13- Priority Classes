@@ -1,0 +1,134 @@
+# Kubernetes Priority Classes Documentation
+
+## Overview
+
+Priority Classes in Kubernetes provide a mechanism to assign different priority levels to pods, ensuring that higher priority workloads are scheduled and run before lower priority ones. This is particularly important for maintaining the availability of critical system components and applications in resource-constrained environments.
+
+## Key Concepts
+
+### Priority Ranges
+
+Kubernetes uses two distinct priority ranges:
+
+1. **System Priority Range** (for Kubernetes internal components):
+   - Highest priority: ~2,000,000,000
+   - Dedicated for control plane components and other critical system pods
+
+2. **User Priority Range** (for application workloads):
+   - Highest: 1,000,000,000
+   - Lowest: -2,000,000,000
+   - Larger numbers indicate higher priority
+
+### Default Priority
+
+- Pods without an explicitly defined priority class have a default priority of 0
+- The default priority can be changed by creating a priority class with the `globalDefault` flag set to true
+
+## Priority Class Object
+
+Priority Classes are cluster-scoped objects (not namespaced) defined with the following structure:
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: <priority-class-name>
+value: <priority-value>  # Integer within the valid range
+globalDefault: <boolean> # Optional (false by default)
+description: <string>    # Optional description
+preemptionPolicy: <PreemptLowerPriority|Never>  # Optional
+```
+
+## Working with Priority Classes
+
+### Listing Existing Priority Classes
+
+```bash
+kubectl get priorityclass
+```
+
+Example output showing system priority classes:
+```
+NAME                      VALUE        GLOBAL-DEFAULT   AGE
+system-cluster-critical   2000000000   false            15d
+system-node-critical      2000001000   false            15d
+```
+
+### Creating a New Priority Class
+
+Example creating a high-priority class for critical applications:
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: critical-apps
+value: 1000000
+globalDefault: false
+description: "Priority class for mission-critical applications"
+```
+
+### Assigning Priority to Pods
+
+To assign a priority class to a pod, include the `priorityClassName` in the pod spec:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: important-app
+spec:
+  containers:
+  - name: app
+    image: important-app:latest
+  priorityClassName: critical-apps
+```
+
+## Preemption Behavior
+
+When a high-priority pod cannot be scheduled due to resource constraints:
+
+1. **Default Behavior** (`preemptionPolicy: PreemptLowerPriority`):
+   - The scheduler will attempt to evict lower-priority pods to make room
+   - Only pods with lower priority than the pending pod are considered for preemption
+
+2. **Non-Preempting Behavior** (`preemptionPolicy: Never`):
+   - The pod will wait in the scheduling queue until resources become available
+   - It will still have scheduling priority over lower-priority pods in the queue
+
+## Example Scenario
+
+Consider three workloads with different priorities:
+
+1. **Critical App**: Priority 7
+2. **Jobs App**: Priority 5
+3. **High Priority Job**: Priority 6
+
+**Scheduling Sequence**:
+
+1. When resources are available:
+   - Critical App (7) schedules first
+   - Jobs App (5) schedules next if resources remain
+
+2. When resources are exhausted and High Priority Job (6) arrives:
+   - With default preemption: The Jobs App (5) may be evicted to schedule the High Priority Job (6)
+   - With `preemptionPolicy: Never`: The High Priority Job (6) waits in queue until resources free up
+
+## Best Practices
+
+1. **System Components**: Always use system priority classes for control plane components
+2. **Application Tiers**: Define clear priority classes for different application tiers (critical, important, background)
+3. **Global Default**: Set a global default priority class only if most pods should have that priority
+4. **Preemption Policies**: Use `Never` for workloads where disruption would be costly
+5. **Priority Values**: Leave sufficient gaps between priority levels for future needs
+
+## Important Notes
+
+- Only one PriorityClass can have `globalDefault: true` in a cluster
+- Once a PriorityClass is created, its `value` field cannot be updated
+- Deleting a PriorityClass does not affect existing pods that used it
+- Priority affects scheduling order but not resource allocation (resources are still distributed equally once scheduled)
+
+## Conclusion
+
+Priority Classes are a powerful mechanism for ensuring critical workloads get the resources they need in Kubernetes clusters. By properly configuring priorities and preemption policies, administrators can maintain system stability while ensuring business-critical applications receive appropriate precedence over less important workloads.

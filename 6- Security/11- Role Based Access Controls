@@ -1,0 +1,167 @@
+# Role-Based Access Control (RBAC) Documentation
+
+## Overview
+In this lecture, we delve into the details of Role-Based Access Control (RBAC) in Kubernetes. RBAC is a method of regulating access to resources based on the roles assigned to users within a cluster. This documentation explains how to create roles, bind them to users, and manage permissions effectively.
+
+---
+
+## Creating a Role
+To create a role, you need to define a **Role object** using a YAML file. Here’s how you can do it:
+
+1. **Role Definition File**:
+   - Set the `apiVersion` to `rbac.authorization.k8s.io/v1`.
+   - Set the `kind` to `Role`.
+   - Name the role (e.g., `developer`) to reflect its purpose.
+   - Define the rules for the role.
+
+   Example:
+   ```yaml
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: Role
+   metadata:
+     namespace: default
+     name: developer
+   rules:
+   - apiGroups: [""] # Core group, leave blank for core resources
+     resources: ["pods"]
+     verbs: ["list", "get", "create", "delete"]
+   - apiGroups: [""]
+     resources: ["configmaps"]
+     verbs: ["create"]
+   ```
+
+   - **apiGroups**: Specifies the API group. For core resources, leave this blank (`""`).
+   - **resources**: Lists the resources (e.g., `pods`, `configmaps`) the role will have access to.
+   - **verbs**: Defines the actions (e.g., `list`, `get`, `create`, `delete`) that can be performed on the resources.
+
+2. **Create the Role**:
+   Use the `kubectl create` command to create the role:
+   ```bash
+   kubectl create -f role-definition.yaml
+   ```
+
+---
+
+## Linking Users to Roles (RoleBinding)
+Once the role is created, you need to bind it to a user using a **RoleBinding** object.
+
+1. **RoleBinding Definition File**:
+   - Set the `apiVersion` to `rbac.authorization.k8s.io/v1`.
+   - Set the `kind` to `RoleBinding`.
+   - Name the RoleBinding (e.g., `dev-user-to-developer-binding`).
+   - Specify the user in the `subjects` section.
+   - Reference the role in the `roleRef` section.
+
+   Example:
+   ```yaml
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: RoleBinding
+   metadata:
+     name: dev-user-to-developer-binding
+     namespace: default
+   subjects:
+   - kind: User
+     name: dev-user
+     apiGroup: rbac.authorization.k8s.io
+   roleRef:
+     kind: Role
+     name: developer
+     apiGroup: rbac.authorization.k8s.io
+   ```
+
+2. **Create the RoleBinding**:
+   Use the `kubectl create` command to create the RoleBinding:
+   ```bash
+   kubectl create -f role-binding-definition.yaml
+   ```
+
+---
+
+## Namespace Scope
+Roles and RoleBindings are namespace-scoped. This means that the permissions granted by a role are limited to the namespace specified in the metadata of the role definition. For example, the `dev-user` will only have access to pods and configmaps within the `default` namespace.
+
+If you want to restrict access to a different namespace, specify the namespace in the metadata of the role and RoleBinding definition files.
+
+---
+
+## Viewing Roles and RoleBindings
+To view the created roles and RoleBindings, use the following commands:
+
+1. **List Roles**:
+   ```bash
+   kubectl get roles
+   ```
+
+2. **List RoleBindings**:
+   ```bash
+   kubectl get rolebindings
+   ```
+
+3. **Describe a Role**:
+   To view detailed information about a role, use:
+   ```bash
+   kubectl describe role developer
+   ```
+   This will display the resources and permissions associated with the role.
+
+4. **Describe a RoleBinding**:
+   To view detailed information about a RoleBinding, use:
+   ```bash
+   kubectl describe rolebinding dev-user-to-developer-binding
+   ```
+
+---
+
+## Checking User Permissions
+As a user, you can check if you have access to specific resources using the `kubectl auth can-i` command.
+
+1. **Check Permissions**:
+   ```bash
+   kubectl auth can-i create deployments
+   kubectl auth can-i delete nodes
+   ```
+
+2. **Impersonate a User**:
+   As an administrator, you can impersonate another user to test their permissions:
+   ```bash
+   kubectl auth can-i create pods --as=dev-user
+   kubectl auth can-i create pods --as=dev-user --namespace=test
+   ```
+
+   For example:
+   - If the `dev-user` does not have permission to create deployments, the command will return `no`.
+   - If the `dev-user` has permission to create pods in the `default` namespace but not in the `test` namespace, the command will reflect that.
+
+---
+
+## Restricting Access to Specific Resources
+You can further restrict access to specific resources within a namespace. For example, if you have five pods in a namespace but only want to grant access to two of them (`blue-pod` and `orange-pod`), you can use the `resourceNames` field in the role definition.
+
+Example:
+```yaml
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  resourceNames: ["blue-pod", "orange-pod"]
+  verbs: ["get", "list"]
+```
+
+---
+
+## Practice Exercises
+To reinforce your understanding of RBAC, practice the following tasks:
+1. Create a role with specific permissions for a namespace.
+2. Bind the role to a user using a RoleBinding.
+3. Test the user’s permissions using the `kubectl auth can-i` command.
+4. Restrict access to specific resources within a namespace using the `resourceNames` field.
+
+---
+
+## Summary
+- **Roles** define permissions for resources within a namespace.
+- **RoleBindings** link users to roles.
+- Permissions are namespace-scoped unless using ClusterRoles and ClusterRoleBindings.
+- Use `kubectl auth can-i` to check user permissions.
+- Restrict access to specific resources using the `resourceNames` field.
+
+By following this documentation, you can effectively manage access control in your Kubernetes cluster using RBAC.

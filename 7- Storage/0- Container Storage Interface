@@ -1,0 +1,38 @@
+**Container Storage Interface (CSI) Overview**
+
+In the early days of Kubernetes, Docker was the sole container runtime engine used, and all the code required to interact with Docker was embedded within the Kubernetes source code. However, as other container runtimes like Rocket and CRI-O emerged, it became crucial to extend support for different container runtimes without being tightly coupled to the Kubernetes source code. This led to the development of the **Container Runtime Interface (CRI)**, a standard defining how an orchestration solution like Kubernetes communicates with container runtimes such as Docker. By following the CRI standards, any new container runtime could integrate with Kubernetes without requiring modifications to the Kubernetes source code or coordination with its development team.
+
+Similar to the CRI, the **Container Networking Interface (CNI)** was introduced to extend support for various networking solutions. Networking vendors could develop their plugins based on the CNI standards, enabling their solutions to work seamlessly with Kubernetes. Following this pattern, the **Container Storage Interface (CSI)** was developed to enable support for multiple storage solutions.
+
+### What is CSI?
+
+The Container Storage Interface (CSI) is a universal standard that allows storage vendors to develop drivers that integrate their storage solutions with container orchestration platforms. With CSI, developers can create their own drivers to make their storage systems compatible with Kubernetes and other container orchestration tools. Major storage vendors like Portworx, Amazon EBS, Azure Disk, Dell EMC (Isilon, PowerMax, Unity, XtremIO), NetApp, Nutanix, HPE, Hitachi, and Pure Storage have implemented their own CSI drivers.
+
+### Key Features of CSI
+
+1. **Universal Standard:** CSI is not specific to Kubernetes; it is designed as a universal standard. Any container orchestration platform that implements the CSI standard can work with storage vendors offering a supported plugin.
+2. **Supported Platforms:** Kubernetes, Cloud Foundry, and Mesos currently support CSI.
+3. **Extensibility:** CSI enables seamless integration of new storage solutions without requiring changes to the source code of container orchestration platforms.
+
+### How CSI Works
+
+The CSI defines a set of Remote Procedure Calls (RPCs) that the container orchestrator (e.g., Kubernetes) uses to communicate with storage drivers. These RPCs must be implemented by the storage drivers. Below are examples of key RPCs:
+
+- **CreateVolume:** When a pod is created and requires a volume, Kubernetes calls the `CreateVolume` RPC, passing details such as the volume name. The storage driver handles this request by provisioning a new volume on the storage array and returning the operation results.
+
+- **DeleteVolume:** When a volume is to be deleted, Kubernetes calls the `DeleteVolume` RPC. The storage driver implements this RPC to decommission the volume from the storage array and return the results of the operation.
+
+### CSI Specifications
+
+The CSI specification provides detailed guidelines on:
+
+1. **Parameters:** The exact parameters that should be sent by the container orchestrator.
+2. **Responses:** What the storage driver should return to the orchestrator.
+3. **Error Handling:** The error codes that should be exchanged during operations.
+
+For a comprehensive understanding of the CSI specifications, you can view the documentation on GitHub at the official CSI repository.
+
+### Conclusion
+
+The Container Storage Interface has revolutionized the way storage solutions integrate with container orchestration platforms. By providing a standardized framework, CSI enables storage vendors to develop plugins that work seamlessly with Kubernetes and other platforms, fostering innovation and flexibility in the container ecosystem.
+

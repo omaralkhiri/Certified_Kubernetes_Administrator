@@ -1,0 +1,152 @@
+# Developing Custom Controllers in Kubernetes
+
+## Introduction
+A **custom controller** in Kubernetes is a process that runs in a loop, continuously monitoring the cluster and listening for events related to specific objects. In this case, we will create a custom controller to manage **Flight Ticket** objects. The controller will track the status of these objects and perform actions such as booking, editing, or canceling flight tickets by making API calls to a flight booking system.
+
+## Prerequisites
+Before proceeding, ensure you have the following installed:
+- **Kubernetes cluster**
+- **kubectl** installed and configured
+- **Go programming language** installed
+- **Git** installed
+
+## Steps to Build a Custom Controller
+
+### 1. Create a Custom Resource Definition (CRD)
+Before implementing the controller, ensure that you have defined a **Custom Resource Definition (CRD)** for the **Flight Ticket** object. This allows Kubernetes to recognize the new resource type.
+
+Example CRD:
+```yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: flighttickets.example.com
+spec:
+  group: example.com
+  names:
+    kind: FlightTicket
+    listKind: FlightTicketList
+    plural: flighttickets
+    singular: flightticket
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                passengerName:
+                  type: string
+                flightNumber:
+                  type: string
+                status:
+                  type: string
+```
+
+Apply the CRD:
+```sh
+kubectl apply -f flightticket-crd.yaml
+```
+
+### 2. Clone the Sample Controller Repository
+There is a **sample controller** available on GitHub that provides a boilerplate structure for building custom controllers. Clone the repository:
+```sh
+git clone https://github.com/kubernetes/sample-controller.git
+cd sample-controller
+```
+
+### 3. Customize the Controller
+Edit the `controller.go` file to define the behavior of your custom controller. This includes monitoring **Flight Ticket** objects and making API calls to book or manage flights.
+
+Example snippet from `controller.go`:
+```go
+func (c *Controller) processNextWorkItem() bool {
+    obj, shutdown := c.queue.Get()
+    if shutdown {
+        return false
+    }
+    defer c.queue.Done(obj)
+    
+    key, err := cache.MetaNamespaceKeyFunc(obj)
+    if err != nil {
+        return false
+    }
+    
+    fmt.Printf("Processing FlightTicket: %s\n", key)
+    // Add logic to communicate with the flight booking API here
+    return true
+}
+```
+
+### 4. Build and Run the Controller
+Once you have customized the controller, build and run it:
+```sh
+go build -o custom-controller
+./custom-controller --kubeconfig=$HOME/.kube/config
+```
+
+This will start the controller locally, where it will monitor **Flight Ticket** objects and take actions accordingly.
+
+### 5. Deploy the Controller in Kubernetes
+Instead of running the controller manually, you can package it in a **Docker container** and deploy it in Kubernetes.
+
+#### Create a Dockerfile:
+```dockerfile
+FROM golang:1.19
+WORKDIR /app
+COPY . .
+RUN go build -o custom-controller
+CMD ["./custom-controller", "--kubeconfig=/root/.kube/config"]
+```
+
+#### Build and Push the Docker Image:
+```sh
+docker build -t myregistry/custom-controller:v1 .
+docker push myregistry/custom-controller:v1
+```
+
+#### Deploy as a Kubernetes Deployment:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flight-ticket-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flight-ticket-controller
+  template:
+    metadata:
+      labels:
+        app: flight-ticket-controller
+    spec:
+      containers:
+      - name: controller
+        image: myregistry/custom-controller:v1
+```
+
+Apply the deployment:
+```sh
+kubectl apply -f controller-deployment.yaml
+```
+
+## Summary
+- **Define a Custom Resource Definition (CRD)** to introduce the new **Flight Ticket** resource.
+- **Develop a custom controller** in Go that watches for **Flight Ticket** objects and performs actions accordingly.
+- **Build and run the controller locally**, then deploy it in Kubernetes using Docker.
+- **Package the controller as a containerized application** to ensure it runs automatically within the cluster.
+
+## Exam Relevance
+While the exam may not include detailed questions on writing a custom controller, understanding **Custom Resource Definitions (CRDs)** and how to work with **existing controllers** is crucial. Focus on:
+- Creating and managing CRDs
+- Understanding how controllers interact with custom resources
+- Deploying and managing controllers in Kubernetes
+
+This guide provides a high-level overview of developing custom controllers in Kubernetes. In future discussions, we will explore **advanced topics like building Kubernetes operators**.
+

@@ -1,0 +1,90 @@
+### Introduction to etcd for Beginners ###
+
+This guide provides a basic introduction to **etcd**, a distributed key-value store, and how it differs from traditional databases. If you're already familiar with **etcd** (also referred to as HCD in some instances), feel free to skip ahead to the next section, where we will dive into **etcd in Kubernetes**. 
+
+### What is a Key-Value Store?
+
+Traditionally, databases are structured in a tabular format, as seen in **SQL** or **relational databases**, where data is stored in rows and columns. For example, you might have a table that holds information about individuals. Each row represents a person, and each column contains a specific type of information about that person.
+
+When you need to add more data, such as the **salary** of each person, you would typically add a new column. However, this method can lead to a lot of empty cells if not every person has salary information, making the table inefficient. If you add more fields like **grades**, only a subset of the entries (like students) would have values in these fields, while the rest would remain empty.
+
+This is where a **key-value store** like **etcd** becomes useful. In a key-value store, data is stored as a document or "page" for each entity (such as a person), and the document can hold different fields (key-value pairs) for each entity. This means that adding new fields for some entities doesn't affect others, and each entity can store data that is relevant to them. For instance, a worker can have a "salary" field, while a student might have a "grades" field, and their information can exist separately in a document.
+
+Key-value stores are more flexible than relational databases, especially when dealing with complex data formats like JSON or YAML.
+
+### Installing and Getting Started with etcd
+
+To quickly set up **etcd**, you need to:
+
+1. Download the binary for your operating system from the **etcd GitHub releases page**.
+2. Extract the downloaded file and run the **etcd** executable.
+
+When **etcd** is started, it will listen for requests on port `2379` by default. You can then connect to **etcd** using clients to store and retrieve key-value data.
+
+### Using etcdctl to Interact with etcd
+
+The default client tool for interacting with **etcd** is **etcdctl**, which is a command-line interface (CLI) that allows you to store and retrieve key-value pairs. Here’s how you can use **etcdctl**:
+
+- To store a key-value pair, use the `etcdctl put` command. For example:
+  ```bash
+  etcdctl put key1 value1
+  ```
+  This stores the key `key1` with the value `value1`.
+
+- To retrieve the stored value, use the `etcdctl get` command:
+  ```bash
+  etcdctl get key1
+  ```
+  This will display the value associated with `key1`.
+
+To see all the available commands, you can run **etcdctl** without any arguments, which will show the list of supported commands.
+
+### Key Changes in etcd Versions
+
+**etcd** has undergone several significant version updates since its inception. Here’s a summary of important changes:
+
+- **Version 0.1 (Released in August 2013)**: The first version of **etcd**.
+- **Version 2.0 (Released in February 2015)**: Introduced the **Raft consensus algorithm**, which made **etcd** more scalable and robust. This version also supported more than 10,000 writes per second.
+- **Version 3.0 (Released in January 2017)**: Focused on optimizations and performance improvements, making it more efficient and stable.
+- **November 2018**: **etcd** was officially incubated under the **Cloud Native Computing Foundation (CNCF)**.
+
+The most significant change between **version 2** and **version 3** was the redesign of the API. The API version change led to modifications in the **etcdctl** commands, so it’s important to understand which version of **etcd** and its API you are using.
+
+### Understanding etcd API Versions
+
+- **etcdctl** itself has its version (e.g., `etcdctl v3`), but it’s also configured to interact with different **etcd API versions** (either v2 or v3).
+- To check which version of the **etcdctl** tool is being used, run:
+  ```bash
+  etcdctl version
+  ```
+  This will output the **etcdctl** version and the API version it is configured to use.
+
+- If your **etcdctl** is using **API v2** and you want to use **API v3**, you need to specify that either by adding the flag `--v3` for each command or by setting an environment variable for the session:
+  ```bash
+  export ETCDCTL_API=3
+  ```
+
+### Common Changes in Commands between Versions
+
+- In **etcd v2**, to set a value, you used:
+  ```bash
+  etcdctl set <key> <value>
+  ```
+- In **etcd v3**, the command changed to:
+  ```bash
+  etcdctl put <key> <value>
+  ```
+- To retrieve a value in **etcd v2**, the command was:
+  ```bash
+  etcdctl get <key>
+  ```
+- In **etcd v3**, it remains the same:
+  ```bash
+  etcdctl get <key>
+  ```
+
+### Conclusion
+
+In this introduction, we covered the basics of **etcd**, a distributed key-value store, and how it differs from traditional relational databases. We also discussed how to install and interact with **etcd** using the **etcdctl** command-line tool, as well as the major changes that occurred between version 2 and version 3 of **etcd**.
+
+In future videos, we will explore how to set up **etcd** in a high-availability (HA) environment and how it integrates with Kubernetes. Thank you for watching, and I look forward to seeing you in the next lesson!

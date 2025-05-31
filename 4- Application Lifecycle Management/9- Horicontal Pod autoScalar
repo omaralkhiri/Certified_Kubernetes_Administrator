@@ -1,0 +1,110 @@
+# Kubernetes Horizontal Pod Autoscaler (HPA)
+
+## Manual Horizontal Scaling
+As a Kubernetes administrator, ensuring that there is sufficient workload to support application demand is essential. One way to manage this is by manually scaling a deployment.
+
+### Steps for Manual Scaling:
+1. **Monitor Resource Usage**
+   - Run the following command to check the CPU and memory usage of the pods:
+     ```sh
+     kubectl top pod
+     ```
+   - Ensure that the Metrics Server is running in the cluster, as it is required for monitoring resource usage.
+   
+2. **Determine Scaling Threshold**
+   - Consider a pod with a request of **250 milliCPU** and a limit of **500 milliCPU**.
+   - If the pod reaches around **450 milliCPU**, manual scaling might be required.
+   
+3. **Scale Deployment**
+   - Run the following command to scale the deployment when needed:
+     ```sh
+     kubectl scale deployment my-app --replicas=3
+     ```
+   
+### Challenges with Manual Scaling:
+- Requires continuous monitoring by an administrator.
+- Scaling up or down must be done manually.
+- Reaction time may not be fast enough to handle sudden traffic spikes.
+
+## Horizontal Pod Autoscaler (HPA)
+To automate this process, Kubernetes provides the **Horizontal Pod Autoscaler (HPA)**. The HPA monitors resource usage and automatically scales the number of pods based on defined metrics, such as CPU or memory utilization.
+
+### How HPA Works:
+1. HPA continuously polls the **Metrics Server** to monitor resource usage.
+2. When resource consumption exceeds the defined threshold, it automatically increases the number of pods.
+3. When resource usage drops, HPA scales down the pods to save resources.
+4. HPA can track multiple metric types, including **CPU, memory, and custom metrics**.
+
+### Creating an HPA Using the Imperative Approach
+To create an HPA for an Nginx deployment with a **CPU threshold of 50%**, a **minimum of 1 pod**, and a **maximum of 10 pods**, run:
+```sh
+kubectl autoscale deployment my-app --cpu-percent=50 --min=1 --max=10
+```
+
+Once executed, Kubernetes:
+- Creates an HPA for the `my-app` deployment.
+- Reads the CPU limits configured for the pods (e.g., 500 milliCPU).
+- Automatically adjusts the number of replicas based on CPU utilization.
+
+### Checking HPA Status
+Run the following command to view the current status of the HPA:
+```sh
+kubectl get hpa
+```
+This command provides details such as:
+- **Current CPU usage vs. threshold**
+- **Minimum and maximum replicas**
+- **Current number of replicas**
+
+### Deleting an HPA
+If you no longer need the HPA, delete it with:
+```sh
+kubectl delete hpa my-app
+```
+
+## Creating an HPA Using the Declarative Approach
+Instead of using an imperative command, HPA can be defined in a YAML configuration file.
+
+Create an HPA definition file (`hpa.yaml`):
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: my-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-app
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+```
+Apply the configuration:
+```sh
+kubectl apply -f hpa.yaml
+```
+
+## HPA Dependencies and Additional Features
+### Metrics Server
+HPA depends on the **Metrics Server** to obtain resource utilization data. Ensure it is installed and running in the cluster.
+
+### Custom Metrics
+Apart from the default **CPU and memory metrics**, HPA can utilize **custom metrics adapters** to pull data from internal sources within the cluster.
+
+### External Metrics
+HPA can also rely on external sources such as **Datadog or Dynatrace** using an **external metrics adapter**. However, these advanced configurations are beyond the scope of this documentation.
+
+## Conclusion
+Kubernetes **Horizontal Pod Autoscaler (HPA)** automates the scaling of workloads based on resource consumption. By leveraging **metrics-based scaling**, HPA ensures efficient resource utilization and responsiveness to workload demand, reducing manual intervention.
+
+---
+
+For further details and advanced topics, refer to Kubernetes official documentation or an **Autoscaling course** that covers custom and external metric scaling strategies.
+

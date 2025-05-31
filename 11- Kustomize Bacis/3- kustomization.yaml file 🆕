@@ -1,0 +1,105 @@
+# Customizing Kubernetes Configurations with `customization.yaml`
+
+In this guide, we will walk through how to use the `customization.yaml` file with the `kustomize` tool for customizing and managing Kubernetes configurations.
+
+## What is the `customization.yaml` File?
+
+The `customization.yaml` file is a configuration file that tells `kustomize` how to manage your Kubernetes resources and what transformations (customizations) should be applied. It is essential for customizing Kubernetes manifests and is used to group multiple resources and apply consistent changes.
+
+## Why Do We Need the `customization.yaml` File?
+
+The `customization.yaml` file is required for `kustomize` to know which Kubernetes resources (such as deployments, services, etc.) to manage and what modifications (transformations) to apply to them. Without this file, `kustomize` won't know which resources to look at or how to modify them.
+
+## Structure of the `customization.yaml` File
+
+The `customization.yaml` file consists of two main sections:
+1. **Resources**: A list of all the Kubernetes resources that should be managed by `kustomize`. These are the YAML files representing Kubernetes objects such as deployments, services, etc.
+2. **Transformations (Customizations)**: A list of modifications or transformations to apply to the resources, such as adding labels, changing names, or adjusting other resource properties.
+
+## Example Setup
+
+In this example, we have a directory called `k8` that contains two YAML files:
+- `nginx-deployment.yaml` (for the Nginx deployment)
+- `nginx-service.yaml` (for the Nginx service)
+
+We'll create a `customization.yaml` file to instruct `kustomize` on which resources to manage and what customizations to apply.
+
+### `customization.yaml` Example
+
+```yaml
+resources:
+  - nginx-deployment.yaml
+  - nginx-service.yaml
+
+commonLabels:
+  company: codecloud
+```
+
+In the above example:
+- **Resources**: The `nginx-deployment.yaml` and `nginx-service.yaml` files are listed under the `resources` section, meaning `kustomize` will manage these files.
+- **Transformations**: The `commonLabels` section is a simple transformation that applies a label with the key `company` and the value `codecloud` to all resources listed under `resources`.
+
+### How the `customization.yaml` File Works
+
+1. **Resources**: This section tells `kustomize` which resources (YAML files) it should manage. In our example, `nginx-deployment.yaml` and `nginx-service.yaml` will be managed.
+2. **Transformations**: This section contains the customizations to apply. In our case, a common label `company: codecloud` is added to both the deployment and service resources.
+
+### Running `kustomize build`
+
+Once the `customization.yaml` file is configured, you can run the following command to build the final configuration:
+
+```bash
+kustomize build k8/
+```
+
+This command will:
+- Look for the `customization.yaml` file in the specified directory (`k8/` in this case).
+- Import the resources defined in the `resources` section.
+- Apply the transformations defined in the `customization.yaml` file (e.g., the common label).
+- Output the final configuration, which includes both the resources and any transformations.
+
+### Example Output
+
+The output will show the resulting Kubernetes resources after applying the transformations, for example:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    company: codecloud
+spec:
+  # Service definition here...
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    company: codecloud
+spec:
+  # Deployment definition here...
+```
+
+As shown, both the `nginx-deployment` and `nginx-service` resources now include the `company: codecloud` label, thanks to the transformation defined in the `customization.yaml`.
+
+## Important Notes
+
+1. **`kustomize build` does not deploy resources**: The `kustomize build` command only outputs the final YAML configuration. It does **not** apply these configurations to a Kubernetes cluster. To apply the configurations to your cluster, you need to redirect the output to `kubectl apply`:
+
+    ```bash
+    kustomize build k8/ | kubectl apply -f -
+    ```
+
+2. **Customizations**: The transformation section can include many different customizations, such as adding annotations, changing names, adjusting resource limits, or even patching existing resources. This example only used a common label for simplicity.
+
+## Summary
+
+To summarize, the `customization.yaml` file is essential for defining which Kubernetes resources `kustomize` should manage and what transformations should be applied to those resources. The file consists of two main sections:
+- **Resources**: The list of YAML files that define the Kubernetes resources.
+- **Transformations**: The modifications to be applied, such as labels or annotations.
+
+After configuring the `customization.yaml` file, you can run `kustomize build` to see the transformed resources. To actually deploy them, you need to apply the output using `kubectl apply`.
+
+In the next video, we'll dive deeper into additional customizations you can use with `kustomize`.

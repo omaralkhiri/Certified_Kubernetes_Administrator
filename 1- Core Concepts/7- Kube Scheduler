@@ -1,0 +1,42 @@
+### Documentation: Kube Scheduler in Kubernetes
+
+#### Overview
+The **Kube scheduler** is a key component of Kubernetes that determines which node a pod should be scheduled on. It does not directly place the pod on a node but instead makes scheduling decisions based on the available resources and constraints. Once the scheduler makes a decision, the **kubelet** on the node takes responsibility for creating the pod on the node.
+
+#### Why Do We Need a Scheduler?
+In a Kubernetes cluster, there can be multiple nodes with varying resources, and you want to ensure that the correct pod is placed on the most suitable node. A pod could have specific resource requirements (e.g., CPU, memory), and a node may be dedicated to certain types of applications. The scheduler helps ensure that resources are allocated efficiently and that pods are placed on the appropriate nodes.
+
+#### How Does the Kube Scheduler Work?
+The scheduling process is performed in two phases:
+
+1. **Filtering Phase**: 
+   The scheduler filters out nodes that cannot meet the resource requirements of the pod. For example, if a pod requires more CPU or memory than what a node has available, that node is excluded from the pool of potential nodes.
+
+2. **Ranking Phase**: 
+   After filtering, the scheduler ranks the remaining nodes based on various factors, such as available resources, affinity/anti-affinity rules, and other constraints. Each node is scored based on its suitability for hosting the pod, with a score assigned from 0 to 10. The node with the highest score is selected to host the pod.
+
+#### Customizing the Scheduler
+The **Kube scheduler** can be customized to fit your specific needs. You can configure different scheduling policies, such as resource constraints, node affinity, and custom priority functions. Kubernetes allows you to implement your own custom scheduler if you need advanced scheduling behavior beyond the default scheduler's capabilities.
+
+#### Installation and Configuration of the Kube Scheduler
+
+1. **Installation**:
+   - Download the **Kube scheduler** binary from the Kubernetes release page.
+   - Extract the binary and run it as a service on your master node.
+   - The service requires a scheduler configuration file that specifies the scheduling parameters and policies.
+
+2. **Viewing Scheduler Options**:
+   - If you used **kubeadm** to set up your cluster, the **Kube scheduler** is deployed as a pod in the **kube-system** namespace. The configuration options are located in the pod definition file under `/etc/kubernetes/manifests`.
+   - In a non-kubeadm setup, you can view the **Kube scheduler** options by checking the service definition located in the services directory (e.g., `/etc/systemd/system/kube-scheduler.service`).
+   - You can also inspect the running process and its options by searching for **kube-scheduler** on the master node.
+
+#### Key Concepts in Scheduling
+The **Kube scheduler** uses several important concepts and configurations to make scheduling decisions:
+
+- **Resource Requests and Limits**: These define the CPU and memory requirements for a pod, which the scheduler uses to filter and rank nodes.
+- **Affinity and Anti-Affinity**: These rules allow you to specify where a pod should or should not be scheduled based on certain criteria (e.g., on the same or different nodes).
+- **Taints and Tolerations**: Taints are applied to nodes to repel certain pods, and tolerations are applied to pods to allow them to be scheduled on tainted nodes.
+- **Node Selectors**: These allow you to restrict pod placement to specific nodes based on labels.
+
+#### Conclusion
+The **Kube scheduler** is a vital component in Kubernetes, ensuring that pods are placed on the right nodes based on available resources, affinity rules, and other constraints. It makes the scheduling process flexible and efficient, allowing for customization based on the needs of your applications and infrastructure.

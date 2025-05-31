@@ -1,0 +1,154 @@
+# Kubernetes Deployment Configuration: Working with Containers in Lists
+
+This documentation explains how to perform operations such as adding, replacing, and removing containers in a list using Kubernetes configuration files. Specifically, we'll cover how to manipulate the `containers` section of a `deployment` configuration file using both **Strategic Merge Patches** and **JSON 6902 Patches**.
+
+### Understanding the List Structure
+
+In Kubernetes, the `containers` section of a deployment configuration is a **list**. Lists in YAML use the dash (`-`) syntax to represent each item. In this case, each container in a deployment is represented by an entry in the `containers` list. Here’s an example snippet from a deployment configuration with a single container:
+
+```yaml
+containers:
+  - name: nginx
+    image: nginx
+```
+
+This configuration has one container, named `nginx`, using the `nginx` image.
+
+### Targeting a Specific Container by Index
+
+To perform operations like **replacing** or **updating** containers, we need to target a specific item in the list. The list is indexed starting from zero (0). If you only have one container, the first item will be indexed as 0.
+
+For example, the configuration above has one container, so the index of that container is `0`. The operations we perform will reference this index.
+
+### Replacing a Container in the List
+
+#### Replace Operation with JSON 6902 Patch
+
+In the case where you want to **replace** the name and image of a specific container in the list, you can use a **JSON 6902 Patch**. Here’s how you can do that:
+
+1. **Customization YAML File**: This file will include a patch that targets the specific Kubernetes object. The `path` section will reference the list of containers, with the `0` index indicating the first container.
+   
+2. **Patch Operation**: The operation used will be `replace`, as you're updating the name and image.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+```
+
+In your patch configuration:
+
+```yaml
+- op: replace
+  path: /spec/template/spec/containers/0/name
+  value: haproxy
+- op: replace
+  path: /spec/template/spec/containers/0/image
+  value: haproxy
+```
+
+This will update the container `name` and `image` to `haproxy`.
+
+#### Replace Operation with Strategic Merge Patch
+
+Another approach is to use a **Strategic Merge Patch**. In this case, you can specify the name of the container (e.g., `nginx`) and the new values for `name` and `image`.
+
+```yaml
+containers:
+  - name: nginx
+    image: nginx
+```
+
+Patch file (`label-patch.yaml`):
+
+```yaml
+containers:
+  - name: nginx
+    image: haproxy
+```
+
+This will replace the `nginx` container with an updated container that has the `haproxy` image.
+
+### Adding a Container to the List
+
+To add a new container to the `containers` list, you can use either a **JSON 6902 Patch** or a **Strategic Merge Patch**.
+
+#### Adding a Container with JSON 6902 Patch
+
+If you want to add a container at the end of the list, you can use the `add` operation. Here’s how to do that:
+
+1. **Customization YAML File**: Use the `add` operation and provide the path to the containers list, with a `-` at the end to indicate that the new container should be added at the end of the list.
+
+```yaml
+- op: add
+  path: /spec/template/spec/containers/-
+  value:
+    name: haproxy
+    image: haproxy
+```
+
+The dash (`-`) in the path represents the end of the list, so the new container will be appended.
+
+#### Adding a Container with Strategic Merge Patch
+
+A **Strategic Merge Patch** for adding a container involves specifying the new container in the patch file. Here’s how you can do that:
+
+```yaml
+containers:
+  - name: web
+    image: nginx
+```
+
+Patch file (`label-patch.yaml`):
+
+```yaml
+containers:
+  - name: haproxy
+    image: haproxy
+```
+
+When you merge these two configurations, you will have two containers in the list: one for `web` and one for `haproxy`.
+
+### Removing a Container from the List
+
+To **remove** a container from the list, you can use either a **JSON 6902 Patch** or a **Strategic Merge Patch**.
+
+#### Removing a Container with JSON 6902 Patch
+
+If you want to remove a container by its index, you can use the `remove` operation. Here's an example:
+
+1. **Customization YAML File**: In this file, the operation is set to `remove`, and the path points to the container by index.
+
+```yaml
+- op: remove
+  path: /spec/template/spec/containers/1
+```
+
+Since lists are zero-indexed, the second container (with index `1`) will be removed.
+
+#### Removing a Container with Strategic Merge Patch
+
+In a **Strategic Merge Patch**, the process is slightly different. You will use a special directive called `patch` with `delete` to indicate which container to delete. Here’s how you can do it:
+
+Patch file (`label-patch.yaml`):
+
+```yaml
+$patch: delete
+containers:
+  - name: database
+```
+
+This will remove the container named `database` from the list, leaving any other containers intact.
+
+### Final Thoughts
+
+- **Indexing in Lists**: Remember that lists are zero-indexed. The first container will always have an index of `0`, the second container `1`, and so on.
+- **Operations**: You can perform **add**, **replace**, or **remove** operations on the list of containers using both **JSON 6902 Patches** and **Strategic Merge Patches**.
+- **Strategic Merge Patch**: For deleting items, you must use the `$patch: delete` syntax to specify the container you want to remove by name.

@@ -1,0 +1,94 @@
+# Kubernetes Admission Controllers
+
+## Overview
+Admission controllers are a crucial component of Kubernetes that help enforce security policies and manage cluster behavior beyond just authentication and authorization. These controllers evaluate and potentially modify requests before they reach the etcd database.
+
+## Request Flow in Kubernetes
+When a user sends a request to the Kubernetes API server using `kubectl`, the request undergoes multiple stages:
+
+1. **Authentication:**
+   - Kubernetes verifies the identity of the requester using certificates configured in the kubeconfig file.
+
+2. **Authorization:**
+   - Kubernetes checks if the authenticated user has the necessary permissions to perform the requested action. This is managed using **Role-Based Access Control (RBAC)**.
+   - RBAC policies define what API operations a user can perform on objects such as Pods, Deployments, or Services.
+   - Restrictions can also be applied to specific resource names or namespaces.
+
+3. **Admission Control:**
+   - After authentication and authorization, the request is evaluated by **admission controllers** before being persisted in etcd.
+   - These controllers can validate, modify, or reject requests based on predefined policies.
+
+## Why Use Admission Controllers?
+RBAC controls who can access Kubernetes objects but does not enforce specific security and operational constraints. Admission controllers allow for additional validation and enforcement, such as:
+
+- Restricting image sources (e.g., only allowing images from an internal registry).
+- Preventing the use of the `latest` tag in container images.
+- Enforcing security constraints (e.g., disallowing root user execution in containers).
+- Ensuring that all resources contain required metadata labels.
+- Automatically modifying requests before they are processed.
+
+## Built-in Kubernetes Admission Controllers
+Kubernetes provides several built-in admission controllers. Some key examples include:
+
+1. **AlwaysPullImages**
+   - Ensures that images are always pulled when a pod is created, enhancing security.
+
+2. **DefaultStorageClass**
+   - Automatically assigns a default storage class to Persistent Volume Claims (PVCs) if one is not specified.
+
+3. **EventRateLimit**
+   - Limits the number of requests handled by the API server to prevent excessive load.
+
+4. **NamespaceExists**
+   - Ensures that a requested namespace exists before allowing operations within it.
+
+## Example: Namespace Exists Admission Controller
+If a user attempts to create a Pod in a namespace called `blue` that does not exist, the **NamespaceExists** admission controller will reject the request:
+
+```sh
+kubectl create ns blue
+kubectl run mypod --image=nginx -n blue
+```
+
+If the namespace does not exist, an error message appears:
+
+```sh
+Error: namespace "blue" not found
+```
+
+This is because the request passes through authentication, authorization, and then the NamespaceExists admission controller, which blocks it if the namespace does not exist.
+
+## Enabling and Disabling Admission Controllers
+To see which admission controllers are enabled by default, run:
+
+```sh
+kube-apiserver -h | grep enable-admission-plugins
+
+kubectl exec -it kube-apiserver-controlplane -n kube-system -- kube-apiserver -h | grep 'enable-admission-plugins'
+
+ps -ef | grep kube-apiserver | grep admission-plugins
+```
+
+To enable or disable an admission controller, modify the `kube-apiserver` configuration:
+
+- **Enable an admission controller:**
+  ```sh
+  --enable-admission-plugins=NamespaceAutoProvision,AlwaysPullImages
+  ```
+
+- **Disable an admission controller:**
+  ```sh
+  --disable-admission-plugins=NamespaceExists
+  ```
+
+If running a Kubernetes cluster with `kubeadm`, update the `kube-apiserver` manifest file under `/etc/kubernetes/manifests/kube-apiserver.yaml`.
+
+## Deprecation Notice
+The **NamespaceExists** and **NamespaceAutoProvision** admission controllers are deprecated and replaced by **NamespaceLifecycle**. The **NamespaceLifecycle** controller:
+
+- Ensures that requests to non-existent namespaces are rejected.
+- Prevents the deletion of essential namespaces such as `default`, `kube-system`, and `kube-public`.
+
+## Conclusion
+Admission controllers are a powerful way to enforce cluster policies beyond standard RBAC rules. By leveraging built-in controllers or creating custom ones, Kubernetes administrators can enhance security and enforce best practices efficiently.
+

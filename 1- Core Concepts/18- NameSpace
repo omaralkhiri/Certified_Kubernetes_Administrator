@@ -1,0 +1,79 @@
+### Documentation: Kubernetes Namespaces
+
+Namespaces in Kubernetes provide a mechanism for isolating resources within the same cluster. They are particularly useful for managing large clusters, multi-tenant environments, and providing separation of concerns between different environments (e.g., **development**, **production**).
+
+#### Key Concepts:
+
+1. **Default Namespace**: When you first create resources in Kubernetes, they are typically created in the **default** namespace. It is created automatically when the cluster is set up.
+
+2. **Kube-system**: This namespace is created automatically by Kubernetes to house system-level resources needed for cluster operations (e.g., DNS, networking).
+
+3. **Kube-public**: Resources that should be publicly accessible to all users are placed in this namespace. It is a special namespace automatically created by Kubernetes.
+
+4. **Custom Namespaces**: You can create your own namespaces to isolate environments like **dev**, **prod**, etc., to ensure that resources in one namespace don't accidentally affect resources in another.
+
+#### Namespace Usage:
+
+- **Resource Isolation**: Each namespace can have its own set of resources, policies, and limits.
+- **DNS Resolution**: Resources within the same namespace can reference each other by name. Services in different namespaces can be accessed using the format `<service-name>.<namespace>.svc.cluster.local`.
+  
+#### kubectl Commands for Namespaces:
+
+1. **List Resources in a Specific Namespace**:
+   ```bash
+   kubectl get pods --namespace=<namespace-name>
+   ```
+
+2. **Set a Default Namespace for Current Context**:
+   ```bash
+   kubectl config set-context --current --namespace=<namespace-name>
+   ```
+
+3. **Create a Namespace**:
+   Using a definition file:
+   ```yaml
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: <namespace-name>
+   ```
+   Or with the command:
+   ```bash
+   kubectl create namespace <namespace-name>
+   ```
+
+4. **Switch Between Namespaces**:
+   Use `kubectl config` to change namespaces in the current context:
+   ```bash
+   kubectl config set-context ${kubectl config current-context} --namespace=dev
+   ```
+
+5. **List Resources Across All Namespaces**:
+   ```bash
+   kubectl get pods --all-namespaces
+   ```
+
+6. **Create Resource Quotas**:
+   Create resource quotas to limit the usage of resources like CPU, memory, and pods in a namespace.
+   ```yaml
+   apiVersion: v1
+   kind: ResourceQuote
+   metadata:
+      name: compute-quota
+      namespace: dev
+   spec:
+      hard:
+         pods: "10"
+         requests.memory: 5Gi 
+         requests.cpu: "4"
+         limits.cpu: "10"
+         limits.memory: 10Gi
+   ```
+
+#### Best Practices:
+
+- Use namespaces to organize and separate resources between environments (e.g., **development**, **staging**, **production**).
+- Apply **resource quotas** to control the resource usage in each namespace.
+- Leverage **namespace-based policies** to control user access and actions within each namespace.
+
+Namespaces in Kubernetes provide the ability to logically partition a cluster, making it more manageable and secure in multi-tenant or large-scale environments.

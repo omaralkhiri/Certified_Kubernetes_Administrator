@@ -1,0 +1,159 @@
+# **Docker Networking Documentation**  
+
+## **1. Introduction**  
+Docker provides multiple networking options to configure how containers communicate with each other and the external world. This documentation covers the fundamental networking models in Docker, focusing on **none**, **host**, and **bridge** networks, along with an in-depth look at how Docker implements networking using **Linux namespaces**, **virtual interfaces**, and **iptables** for port forwarding.  
+
+---
+
+## **2. Docker Networking Models**  
+
+### **2.1. None Network**  
+- **Description**:  
+  - The container is **isolated** from all networks.  
+  - No network interfaces (except `lo`, the loopback interface).  
+  - The container cannot communicate with other containers or the external world.  
+
+- **Use Case**:  
+  - Used when a container does not require any network access (e.g., batch processing jobs).  
+
+- **Example Command**:  
+  ```bash
+  docker run --network=none nginx
+  ```
+
+### **2.2. Host Network**  
+- **Description**:  
+  - The container **shares the host’s network stack**.  
+  - No network isolation between the host and container.  
+  - Applications running in the container bind directly to the host’s ports.  
+
+- **Limitations**:  
+  - Port conflicts can occur if multiple containers try to bind to the same port.  
+  - Less secure as the container has full access to the host’s network.  
+
+- **Use Case**:  
+  - High-performance networking where containerized apps need direct host network access.  
+
+- **Example Command**:  
+  ```bash
+  docker run --network=host nginx
+  ```
+
+### **2.3. Bridge Network (Default)**  
+- **Description**:  
+  - Docker creates an **internal private network** (`172.17.0.0/16` by default).  
+  - Each container gets its own **isolated network namespace**.  
+  - Containers can communicate with each other via the bridge.  
+  - External access requires **port mapping (NAT)**.  
+
+- **Default Bridge vs. User-Defined Bridge**:  
+  - **Default Bridge (`docker0`)**:  
+    - Created automatically when Docker is installed.  
+    - Containers can communicate via IP addresses only (unless linked).  
+  - **User-Defined Bridge**:  
+    - Created manually (`docker network create`).  
+    - Provides **automatic DNS resolution** (containers can communicate by name).  
+
+- **Example Command**:  
+  ```bash
+  docker run --network=bridge -p 8080:80 nginx
+  ```
+
+---
+
+## **3. How Docker Implements Bridge Networking**  
+
+### **3.1. Network Namespaces**  
+- Each container runs in its own **network namespace**, providing isolation.  
+- Docker creates namespaces dynamically when containers start.  
+- To list namespaces (requires a workaround since Docker hides them by default):  
+  ```bash
+  ln -s /var/run/docker/netns /var/run/netns
+  ip netns list
+  ```
+
+### **3.2. Virtual Ethernet Interfaces (veth Pairs)**  
+- Docker creates **virtual Ethernet pairs** (`veth`):  
+  - One end is attached to the container’s namespace.  
+  - The other end is attached to the **Docker bridge (`docker0`)**.  
+- Example:  
+  ```bash
+  ip link show  # Shows host-side interfaces
+  docker exec -it <container> ip addr  # Shows container-side interfaces
+  ```
+
+### **3.3. Docker Bridge (`docker0`)**  
+- Acts as a **virtual switch** for containers.  
+- Default IP: `172.17.0.1`.  
+- Each container gets an IP from this subnet (e.g., `172.17.0.2`, `172.17.0.3`).  
+- View bridge details:  
+  ```bash
+  ip addr show docker0
+  ```
+
+### **3.4. Inter-Container Communication**  
+- Containers on the same bridge can communicate via their internal IPs.  
+- Example:  
+  ```bash
+  docker run -d --name=web nginx
+  docker run -it --network=bridge alpine ping 172.17.0.2
+  ```
+
+---
+
+## **4. Port Mapping (NAT with iptables)**  
+
+### **4.1. How Port Forwarding Works**  
+- When a container exposes a port (e.g., `80`), Docker maps it to a host port (e.g., `8080`).  
+- Uses **iptables NAT rules** to forward traffic:  
+  ```bash
+  iptables -t nat -L DOCKER
+  ```
+- Example rule:  
+  ```
+  DNAT tcp -- 0.0.0.0/0 0.0.0.0/0 tcp dpt:8080 to:172.17.0.2:80
+  ```
+
+### **4.2. Example: Exposing a Web Server**  
+- Run NGINX with port mapping:  
+  ```bash
+  docker run -d -p 8080:80 nginx
+  ```
+- Accessible via:  
+  ```bash
+  curl http://<DOCKER_HOST_IP>:8080
+  ```
+
+---
+
+## **5. Summary of Key Concepts**  
+
+| Concept | Description |  
+|---------|------------|  
+| **None Network** | No networking, complete isolation. |  
+| **Host Network** | Shares host’s network stack, no isolation. |  
+| **Bridge Network** | Internal private network with NAT for external access. |  
+| **Network Namespaces** | Isolated network stacks per container. |  
+| **veth Pairs** | Virtual Ethernet cables connecting containers to `docker0`. |  
+| **Port Mapping** | Uses iptables NAT to forward traffic. |  
+
+---
+
+## **6. Conclusion**  
+Docker provides flexible networking options to suit different use cases:  
+- **Isolated workloads** → `none` network.  
+- **High-performance apps** → `host` network.  
+- **Default secure setup** → `bridge` network with port mapping.  
+
+Understanding these concepts helps in troubleshooting and optimizing container networking.  
+
+---
+
+### **Further Reading**  
+- [Docker Networking Documentation](https://docs.docker.com/network/)  
+- [Linux Network Namespaces](https://man7.org/linux/man-pages/man8/ip-netns.8.html)  
+- [iptables NAT for Port Forwarding](https://www.netfilter.org/documentation/)  
+
+---
+
+This documentation provides a **comprehensive guide** to Docker networking, covering theory, implementation, and practical examples. 🚀

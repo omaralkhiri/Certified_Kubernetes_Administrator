@@ -1,0 +1,161 @@
+## Documentation: Using Components in Customized Kubernetes Configurations
+
+### Overview
+
+In this guide, we will explore a customized feature called **components**. A **component** is a reusable piece of configuration logic that can be included in multiple overlays. This is particularly useful in scenarios where an application supports multiple optional features that need to be enabled only in a subset of overlays, as opposed to all overlays. Components allow for efficient reuse of Kubernetes configuration resources, avoiding issues like config drift due to copy-pasting.
+
+### Problem Statement
+
+Consider an application that can be deployed in different variations, for example, `development`, `premium`, and `self-hosted`. Each version of the application may need a specific set of features. For instance, features like caching or external database services might only apply to certain versions of the application.
+
+If we want to enable a specific feature like caching, but only for the `premium` and `self-hosted` versions, we could manually add the relevant configurations to those overlays. However, this approach would require copying and pasting configurations, which is not a scalable or maintainable solution.
+
+Components solve this issue by allowing us to define these configurations as reusable blocks of code, which can be imported into any overlay that requires the feature.
+
+### Benefits of Using Components
+
+- **Avoid Duplication**: Components help avoid the need to copy and paste configuration logic across multiple overlays.
+- **Centralized Logic**: Components allow configuration logic to be stored in one place and imported into multiple overlays, reducing the chances of configuration drift.
+- **Modular and Scalable**: Components allow for better scalability when new features or overlays are added to the application.
+
+### Key Concept: Components
+
+A component is simply a collection of Kubernetes resources associated with a specific feature. For example, a feature like caching would include all relevant resources, such as the Redis configuration, secrets, deployment files, etc. 
+
+By creating components, we can define resources that are needed for a specific feature and import them into the necessary overlays, ensuring that only the required versions of the application receive these configurations.
+
+### Example Use Case
+
+Let’s consider an application with three deployment variations:
+- **Development**
+- **Premium** (for premium customers)
+- **Self-hosted** (for customers who want to self-host the application)
+
+#### Features
+
+1. **Caching**: Only the `premium` and `self-hosted` versions need caching enabled, and both versions require a Redis database.
+2. **External Database (Postgres)**: Only the `development` and `premium` versions need an external database service like Postgres.
+
+#### Folder Structure
+
+To handle these configurations efficiently, the folder structure for the project will look like this:
+
+```
+/base
+  - customization.yaml
+  - api-deployment.yaml
+/overlays
+  /dev
+    - customization.yaml
+  /premium
+    - customization.yaml
+  /self-hosted
+    - customization.yaml
+/components
+  /caching
+    - customization.yaml
+    - redis-deployment.yaml
+    - redis-secret.yaml
+  /database
+    - customization.yaml
+    - postgres-deployment.yaml
+    - postgres-secret.yaml
+```
+
+### Components Structure
+
+Each component has its own folder and configuration files. Let's break down the structure of each component.
+
+#### Caching Component
+
+The `caching` component contains all of the Kubernetes configuration files needed to enable caching. This typically includes a Redis deployment configuration and any associated secrets for authentication.
+
+**File structure**:
+```
+/components/caching
+  - customization.yaml      # Defines the component and imports all relevant resources
+  - redis-deployment.yaml  # Deployment configuration for Redis
+  - redis-secret.yaml      # Secret for Redis database authentication
+```
+
+#### Database Component
+
+Similarly, the `database` component will contain all the necessary resources for an external database service, such as a Postgres database.
+
+**File structure**:
+```
+/components/database
+  - customization.yaml        # Defines the component and imports all relevant resources
+  - postgres-deployment.yaml  # Deployment configuration for Postgres
+  - postgres-secret.yaml      # Secret for Postgres database authentication
+```
+
+### Using Components in Overlays
+
+Once the components are defined, you can import them into the overlays where they are needed. Each overlay will include a reference to the component that should be used.
+
+#### Step-by-Step Example: Importing Components
+
+Consider the **development** overlay, which requires the external Postgres database.
+
+1. **Base Configuration**: The base configuration (`/base`) contains all shared resources and configurations across all overlays. For example, the base API deployment configuration is stored here.
+
+2. **Overlay-Specific Configuration**: In the `dev` overlay, the `customization.yaml` file should include a reference to the `database` component, since the development version needs the external Postgres database.
+
+```yaml
+# /overlays/dev/customization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+components:
+  - ../../components/database  # Import the database component
+```
+
+The `components` section in the `customization.yaml` file points to the path of the `database` component, allowing the `dev` overlay to import all the resources defined within that component.
+
+#### Applying Components to Multiple Overlays
+
+Similarly, for the **premium** and **self-hosted** versions, you would import both the `caching` and `database` components, since both of these features are required for those deployments.
+
+```yaml
+# /overlays/premium/customization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+components:
+  - ../../components/database  # Import the database component
+  - ../../components/caching   # Import the caching component
+```
+
+### Patch Resources in Components
+
+In some cases, you may need to modify or patch base resources. For example, when you add an external database, you might need to add a new environment variable to the API deployment that references the database password. This can be done using a patch file.
+
+For the **database component**, you might create a patch like this:
+
+```yaml
+# /components/database/postgres-deployment-patch.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: api-container
+        env:
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+```
+
+This patch will modify the API deployment in the base configuration to add the necessary environment variable for the database password.
+
+### Conclusion
+
+Using components in Kubernetes configurations allows you to efficiently manage features that are required only in certain overlays. Components provide a way to encapsulate feature-specific configurations and reuse them across overlays without duplication. By creating components and importing them into the relevant overlays, you maintain a clean, scalable, and maintainable configuration structure for your Kubernetes deployments.

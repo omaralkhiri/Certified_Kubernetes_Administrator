@@ -1,0 +1,76 @@
+### Kubernetes Pods: A Basic Introduction
+
+In this lecture, we will cover the fundamentals of **Kubernetes Pods**. Before diving into understanding what Pods are, let’s assume that the following setup is already in place:
+
+1. The application is developed and packaged into **Docker images**. These images are available in a Docker registry, such as Docker Hub, for Kubernetes to pull.
+2. A Kubernetes cluster is already set up and running, either on a single-node or multi-node configuration.
+
+The goal of Kubernetes is to deploy and manage applications in the form of containers running across multiple worker nodes in a cluster. However, **Kubernetes does not deploy containers directly on worker nodes**. Instead, containers are encapsulated within a Kubernetes object called a **Pod**.
+
+### What is a Pod?
+
+A **Pod** is the smallest deployable unit in Kubernetes and represents a single instance of an application running in a container. Pods can contain one or more containers, although typically, a pod is associated with a **single container**.
+
+#### Single Container Pod
+In its simplest form, a Kubernetes pod contains a single Docker container running an application. This is illustrated in the following setup:
+
+- A **single node Kubernetes cluster** is running, and it hosts a **single pod** that encapsulates one Docker container (e.g., a web application).
+  
+#### Scaling Pods
+As the user base for the application grows, it becomes necessary to scale the application. This means adding more instances of the application to handle the increased load.
+
+- To scale, we don’t add more containers to an existing pod. Instead, we create **new pods**, each running a new instance of the application.
+- If the user base increases even further and the current node cannot handle the load, Kubernetes can spin up **additional pods on new nodes** in the cluster.
+
+The main takeaway here is that **pods usually have a one-to-one relationship with containers**. To scale up an application, **new pods are created**, and to scale down, **pods are deleted**. You do not add containers to an existing pod to scale your application.
+
+#### Multi-container Pods
+While Kubernetes pods typically contain **one container**, they can also host **multiple containers**. This scenario is often used when one container (usually called the **helper container**) supports the main application container. For example:
+
+- A web application container might need a helper container to process data or handle files uploaded by users.
+- These containers share the same network namespace and storage space, meaning they can communicate with each other using **localhost** and share volumes easily.
+
+However, the use of multiple containers in a pod is relatively rare, and in this course, we will focus primarily on **single-container pods**.
+
+### Kubernetes Pods vs Docker Containers
+
+To further understand pods, let’s look at how we might deploy containers manually using Docker, before Kubernetes was introduced.
+
+#### Without Kubernetes:
+1. We would use the `docker run` command to deploy a containerized application.
+2. As the load increases, we could scale by running more instances of the application with multiple `docker run` commands.
+3. If the application grows in complexity, we might introduce helper containers that need to interact with the main application container. In Docker, we would need to manage networking, volumes, and ensure containers are linked correctly.
+
+#### With Kubernetes:
+Kubernetes automates much of this process. If a container requires a helper, we can place both the main application and the helper in the same pod, eliminating the need for manual network configurations and volume sharing. The containers in the pod will share the same network namespace and storage, and Kubernetes will automatically manage their lifecycle (creation, scaling, and destruction).
+
+### Creating Pods
+
+You can create a pod using the `kubectl run` command, which will automatically create a pod and deploy a container within it. For example:
+
+```bash
+kubectl run nginx --image=nginx
+```
+
+This command creates a pod with the `nginx` image. Kubernetes will pull this image from a registry (e.g., Docker Hub). You can specify private repositories if needed. Once the pod is created, you can check its status using:
+
+```bash
+kubectl get pods
+```
+
+The output will show the pod's status, which can be in different states, such as **"ContainerCreating"** or **"Running"**.
+
+### Accessing the Application
+
+At this point, the `nginx` pod is running, but it is not externally accessible. You can access it internally within the cluster, but to make it accessible to external users, you will need to set up **services** and **networking**. These concepts will be covered in a later lecture, once we learn about Kubernetes networking and services.
+
+### Conclusion
+
+In this lecture, we learned the following key points about Kubernetes pods:
+
+- A **Pod** is the smallest unit of deployment in Kubernetes and encapsulates one or more containers.
+- **Scaling** is done by creating new pods, not by adding containers to existing pods.
+- Kubernetes simplifies container management by automatically handling networking, storage, and lifecycle management, especially when multiple containers need to interact.
+- The basic pod creation process uses the `kubectl run` command, and you can inspect the status of pods using `kubectl get pods`.
+
+By understanding the basic concept of pods, you're well on your way to deploying and managing containerized applications in Kubernetes. Future lectures will dive deeper into topics such as services, networking, and scaling strategies.

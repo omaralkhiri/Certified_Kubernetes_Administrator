@@ -1,0 +1,144 @@
+# Managing Kubernetes Manifests with Customize: A Guide
+
+In this guide, we'll explore how to efficiently manage Kubernetes manifests that span multiple directories using the `customize` tool. This approach makes it easier to handle large numbers of Kubernetes YAML files and maintain a clean, organized project structure. We'll walk through a simple example and highlight how `customize` can simplify applying configurations, especially when you have a growing set of YAML files organized into subdirectories.
+
+## Example Scenario: Organizing YAML Files
+
+Imagine you have a directory named `k8`, which contains several Kubernetes YAML files. Initially, the structure might look like this:
+
+```
+k8/
+  ├── api_deployment.yaml
+  ├── api_service.yaml
+  ├── db_deployment.yaml
+  ├── db_service.yaml
+```
+
+Here, we have Kubernetes resources for both an API and a database: a deployment and a service for each.
+
+### Applying Kubernetes Resources (Without Customize)
+
+To apply the configurations for both the API and the database, you'd use `kubectl` commands like this:
+
+```bash
+kubectl apply -f k8/api_deployment.yaml
+kubectl apply -f k8/api_service.yaml
+kubectl apply -f k8/db_deployment.yaml
+kubectl apply -f k8/db_service.yaml
+```
+
+This works well when there are just a few YAML files. However, as your project grows and the number of YAML files increases, things can get messy and harder to manage.
+
+## The Problem: Scaling with More YAML Files
+
+As the number of files grows—perhaps to 20, 30, or even 50 YAML files—the manual process of applying resources becomes cumbersome. You may decide to organize the YAML files into subdirectories to make the structure more manageable.
+
+For example, you might move the API-related YAML files into an `api` subdirectory and the database-related YAML files into a `database` subdirectory:
+
+```
+k8/
+  ├── api/
+  │   ├── api_deployment.yaml
+  │   └── api_service.yaml
+  └── database/
+      ├── db_deployment.yaml
+      └── db_service.yaml
+```
+
+Now, to apply the configurations, you'd need to go into each subdirectory and run:
+
+```bash
+kubectl apply -f k8/api
+kubectl apply -f k8/database
+```
+
+This is fine for a smaller project, but as your project grows with more directories, applying configurations becomes repetitive and inefficient. Furthermore, your CI/CD pipeline would need to be configured to apply the resources in each subdirectory.
+
+## How Customize Helps
+
+### Introducing the `customize` Tool
+
+This is where `customize` comes into play. The `customize` tool allows you to define a `Kustomization.yaml` file that lists all the resources you want to manage. With this tool, you no longer need to go into each subdirectory to apply the resources manually.
+
+### Simplifying the Application of Resources
+
+1. **Create a Root `Kustomization.yaml` File**
+
+   In the root of the `k8` directory, create a `Kustomization.yaml` file. In this file, you'll list the relative paths to all of your Kubernetes YAML files within the `api` and `database` subdirectories. For example:
+
+   ```yaml
+   resources:
+     - api/api_deployment.yaml
+     - api/api_service.yaml
+     - database/db_deployment.yaml
+     - database/db_service.yaml
+   ```
+
+2. **Apply Resources Using Customize**
+
+   Now, instead of applying the resources from each subdirectory manually, you can apply all of them in one go. Use the following command:
+
+   ```bash
+   kubectl apply -k k8
+   ```
+
+   This command uses `customize` to find the `Kustomization.yaml` file in the `k8` directory, which lists all the resources to be applied. It then combines and applies all the resources in one command.
+
+### Handling More Subdirectories
+
+As your project grows and more subdirectories are added (e.g., `cache`, `kafka`), you might find that the root `Kustomization.yaml` file becomes cluttered with many resources. To keep it organized, you can break it down further by adding a `Kustomization.yaml` file inside each subdirectory.
+
+For example:
+
+```
+k8/
+  ├── api/
+  │   └── Kustomization.yaml
+  ├── database/
+  │   └── Kustomization.yaml
+  ├── cache/
+  │   └── Kustomization.yaml
+  ├── kafka/
+  │   └── Kustomization.yaml
+  └── Kustomization.yaml (root)
+```
+
+Each subdirectory’s `Kustomization.yaml` file would list only the resources specific to that directory. For example, inside the `api/` subdirectory:
+
+```yaml
+resources:
+  - api_deployment.yaml
+  - api_service.yaml
+```
+
+Similarly, inside the root `Kustomization.yaml` file, you would only reference the subdirectories:
+
+```yaml
+resources:
+  - api
+  - database
+  - cache
+  - kafka
+```
+
+This keeps the root configuration clean and organized, especially as the project grows.
+
+### Final Command for Applying Resources
+
+After restructuring your configurations as described, you can still apply all the resources in your project with a single command:
+
+```bash
+kubectl apply -k k8
+```
+
+This command will:
+
+1. Look at the root `Kustomization.yaml` file.
+2. Find the subdirectories (`api`, `database`, etc.).
+3. Look inside each subdirectory for its `Kustomization.yaml` file.
+4. Apply all the resources defined in each subdirectory.
+
+## Conclusion
+
+Using `customize` for managing Kubernetes manifests across multiple directories makes it much easier to scale and maintain your configurations. By structuring your project with subdirectory-specific `Kustomization.yaml` files, you can avoid cluttering the root file while still applying all resources with a single command. As your project grows, this approach will keep your configurations organized and your deployment process efficient.
+

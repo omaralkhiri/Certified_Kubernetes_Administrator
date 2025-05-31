@@ -1,0 +1,97 @@
+# Kubernetes Pod Commands and Arguments
+
+In this guide, we will explore how to manage **commands and arguments** in a Kubernetes pod. These settings determine the behavior of the container at runtime.
+
+---
+
+## Overview
+
+In a previous session, we created a simple Docker image called `ubuntu-sleeper`. This image sleeps for a specified number of seconds. By default, it sleeps for **5 seconds**, but this behavior can be overridden by passing a command-line argument.
+
+Using the Docker CLI, we ran this image with:
+
+```bash
+docker run ubuntu-sleeper
+```
+
+To customize the behavior, such as making the container sleep for **10 seconds**, we passed an argument like this:
+
+```bash
+docker run ubuntu-sleeper 10
+```
+
+When transitioning to Kubernetes, these configurations are specified in the **pod definition file**.
+
+---
+
+## Pod Definition Fields
+
+In Kubernetes, the behavior of the container is defined in the pod's manifest file. This file includes fields for both **commands** and **arguments**:
+
+1. **Command**  
+   - Corresponds to the `ENTRYPOINT` instruction in the Dockerfile.
+   - Overrides the `ENTRYPOINT` defined in the image.
+
+2. **Args**  
+   - Corresponds to the `CMD` instruction in the Dockerfile.
+   - Overrides the `CMD` specified in the image.
+
+### Example
+
+Below is an example pod definition:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleeper-pod
+spec:
+  containers:
+  - name: sleeper-container
+    image: ubuntu-sleeper
+    command: ["sleep"]    # Overrides ENTRYPOINT
+    args: ["10"]          # Overrides CMD
+```
+
+- **Command**: Overrides the `ENTRYPOINT` in the Dockerfile.  
+- **Args**: Overrides the `CMD` in the Dockerfile.
+
+### Relationship with Dockerfile
+
+Here’s how the Dockerfile instructions map to Kubernetes fields:
+
+| Dockerfile Instruction | Kubernetes Field | Behavior                      |
+|-------------------------|------------------|-------------------------------|
+| `ENTRYPOINT`           | `command`        | Specifies the main executable |
+| `CMD`                  | `args`           | Default arguments to the command |
+
+---
+
+## Example Scenarios
+
+1. **Default Behavior**  
+   Without specifying `command` or `args`, the container uses the default `ENTRYPOINT` and `CMD` values from the Dockerfile.
+
+2. **Override CMD**  
+   To change the duration of the sleep operation, use the `args` field in the pod definition:
+   ```yaml
+   args: ["10"]
+   ```
+
+3. **Override ENTRYPOINT**  
+   To replace the `sleep` command with an alternative, use the `command` field:
+   ```yaml
+   command: ["custom-sleep"]
+   ```
+
+---
+
+## Summary
+
+- The `command` field in Kubernetes corresponds to the `ENTRYPOINT` in Docker.  
+- The `args` field corresponds to the `CMD` in Docker.  
+- Both fields allow you to override the default behavior of the container at runtime.
+
+---
+
+Feel free to explore the coding interface section for practical examples!

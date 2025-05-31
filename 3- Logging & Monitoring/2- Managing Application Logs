@@ -1,0 +1,46 @@
+### Documentation: Viewing Logs in Docker and Kubernetes
+
+#### **1. Viewing Logs in Docker**
+- To run a Docker container in detached mode:
+  ```bash
+  docker run -d <image_name>
+  ```
+- Detached mode prevents you from seeing the logs directly in the terminal.
+- To view logs from a running container:
+  ```bash
+  docker logs <container_id>
+  ```
+- To stream live logs, use the `-f` option:
+  ```bash
+  docker logs -f <container_id>
+  ```
+
+#### **2. Viewing Logs in Kubernetes**
+- To create a pod for a Docker image, use a pod definition file and deploy it:
+  ```bash
+  kubectl apply -f <pod_definition_file>
+  ```
+- To view logs from a running pod:
+  ```bash
+  kubectl logs <pod_name>
+  ```
+- To stream live logs from the pod, use the `-f` option:
+  ```bash
+  kubectl logs -f <pod_name>
+  ```
+
+#### **3. Handling Pods with Multiple Containers**
+- Kubernetes pods can contain multiple containers.
+- If a pod has multiple containers, you must specify the container name explicitly:
+  ```bash
+  kubectl logs <pod_name> -c <container_name>
+  ```
+- Without specifying the container name, the command will fail and prompt you to include the `-c` option.
+
+#### **4. Example**
+- Given a pod with the containers **Event Simulator** and **Image Processor**, to view the logs of the **Event Simulator**:
+  ```bash
+  kubectl logs <pod_name> -c event-simulator
+  ```
+
+This simple logging mechanism helps developers monitor and debug applications in Kubernetes.

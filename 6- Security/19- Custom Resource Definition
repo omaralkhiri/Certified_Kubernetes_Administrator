@@ -1,0 +1,205 @@
+# Custom Resource Definitions (CRDs) in Kubernetes
+
+## Introduction
+Kubernetes provides a set of built-in resources like Deployments, ReplicaSets, Jobs, CronJobs, and StatefulSets, which are managed by their respective controllers. However, sometimes, you may need to define custom resources specific to your use case. This is where **Custom Resource Definitions (CRDs)** come into play.
+
+A **Custom Resource (CR)** is an extension of Kubernetes APIs that allows you to define and manage custom objects. A **Custom Controller** is a process that watches for changes in these resources and takes necessary actions based on the specifications provided.
+
+---
+
+## Kubernetes Resources and Controllers
+When you create a Kubernetes resource like a **Deployment**, Kubernetes stores it in the **etcd** data store. The **Deployment Controller** then monitors this object and ensures the desired state is met by creating a corresponding **ReplicaSet**, which in turn creates **Pods**.
+
+**Example: Deployment YAML Definition**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx
+```
+When this deployment is applied, Kubernetes ensures that 3 pods are running as specified. The **Deployment Controller** is responsible for making sure the desired state matches the actual state.
+
+---
+
+## Creating a Custom Resource: Flight Ticket Example
+Let’s define a **FlightTicket** resource that allows users to book a flight. Our goal is to create an API resource where users can specify:
+- `from`: Departure airport (e.g., Mumbai)
+- `to`: Destination airport (e.g., London)
+- `number`: Number of tickets (e.g., 2)
+
+### Flight Ticket Custom Resource Definition (CRD)
+To create a **FlightTicket** resource, we must first define a **Custom Resource Definition (CRD)**.
+
+**FlightTicket CRD YAML**
+```yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: flighttickets.flight.com
+spec:
+  group: flight.com
+  scope: Namespaced
+  names:
+    kind: FlightTicket
+    singular: flightticket
+    plural: flighttickets
+    shortNames:
+      - ft
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              number:
+                type: integer
+                minimum: 1
+                maximum: 10
+```
+### Applying the CRD
+Run the following command to create the CRD:
+```sh
+kubectl apply -f flightticket-crd.yaml
+```
+
+### Creating a Flight Ticket Object
+Now that the CRD is created, we can define a FlightTicket resource.
+
+**FlightTicket Resource YAML**
+```yaml
+apiVersion: flight.com/v1
+kind: FlightTicket
+metadata:
+  name: my-flight-ticket
+spec:
+  from: Mumbai
+  to: London
+  number: 2
+```
+### Applying the Custom Resource
+```sh
+kubectl apply -f flightticket.yaml
+```
+
+### Listing and Deleting the Resource
+- To list all flight tickets:
+  ```sh
+  kubectl get flighttickets
+  ```
+- To delete a flight ticket:
+  ```sh
+  kubectl delete flightticket my-flight-ticket
+  ```
+
+At this stage, the custom resource is stored in Kubernetes, but it does not perform any action. This is because we need a **Custom Controller** to process and act upon this resource.
+
+---
+
+## Creating a Custom Controller
+To make the **FlightTicket** resource functional, we need a **controller** that watches for these resources and performs necessary actions, such as calling an external API to book a flight ticket.
+
+**Custom Controller Responsibilities:**
+1. Watches for new, updated, or deleted FlightTicket resources.
+2. Calls an external API (`https://bookflight.com/api`) to book or cancel a ticket.
+3. Updates the resource status based on the API response.
+
+### Custom Controller (Go Example)
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/watch"
+)
+
+func main() {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	watcher, err := clientset.CoreV1().RESTClient().Get().Resource("flighttickets").Watch(context.Background())
+	if err != nil {
+		panic(err.Error())
+	}
+
+	for event := range watcher.ResultChan() {
+		switch event.Type {
+		case watch.Added:
+			fmt.Println("New Flight Ticket Created")
+			// Call external API to book a ticket
+		case watch.Deleted:
+			fmt.Println("Flight Ticket Deleted")
+			// Call external API to cancel booking
+		}
+	}
+}
+```
+
+### Deploying the Custom Controller
+The controller should be packaged into a Docker container and deployed as a **Kubernetes Deployment**.
+
+**Controller Deployment YAML**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flightticket-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flightticket-controller
+  template:
+    metadata:
+      labels:
+        app: flightticket-controller
+    spec:
+      containers:
+      - name: flightticket-controller
+        image: myregistry/flightticket-controller:v1
+```
+
+### Apply the Controller Deployment
+```sh
+kubectl apply -f controller-deployment.yaml
+```
+
+---
+
+## Summary
+- **Custom Resource Definition (CRD)**: Defines a new resource type in Kubernetes.
+- **Custom Resource (CR)**: Instances of a CRD.
+- **Custom Controller**: Watches for CR events and performs actions (e.g., calling an API).
+
+By using CRDs and controllers, we can extend Kubernetes functionality and integrate it with external services seamlessly.

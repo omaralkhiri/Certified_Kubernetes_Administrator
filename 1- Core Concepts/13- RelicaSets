@@ -1,0 +1,184 @@
+### **Kubernetes Controllers: Replication Controller & Replica Set**
+
+Welcome to this lecture on Kubernetes controllers. My name is Moksha Man Omar, and in this session, we will discuss Kubernetes controllers. Controllers are the "brains" behind Kubernetes. They are processes that monitor Kubernetes objects and respond accordingly. In this lecture, we will focus on one controller in particular: the **Replication Controller**.
+
+### **What is a Replica and Why Do We Need a Replication Controller?**
+
+Let's begin by considering a simple scenario: you have a single pod running your application. What happens if your application crashes and the pod fails? In such a case, users will no longer be able to access the application. To prevent this, we want multiple instances or pods running simultaneously. This ensures that if one pod fails, others are still available, keeping the application running. 
+
+The **Replication Controller** helps run multiple instances of a single pod in a Kubernetes cluster, ensuring **high availability**. 
+
+You might wonder: **Can you use a replication controller with just a single pod?** Yes! Even with a single pod, the replication controller can help by automatically bringing up a new pod if the existing one fails. Therefore, the replication controller ensures that the specified number of pods are always running—whether that's just one or 100.
+
+Another reason we need a replication controller is to **distribute the load**. Consider a scenario where you have a single pod serving users. As the number of users grows, you need to deploy additional pods to balance the load. If the demand increases further and you run out of resources on one node, you can deploy more pods across other nodes in the cluster. The replication controller spans multiple nodes, balancing the load and scaling your application as demand grows.
+
+### **Replication Controller vs. Replica Set**
+
+It’s important to note two similar terms: **Replication Controller** and **Replica Set**. Both have the same purpose, but they are not identical. The replication controller is an older technology and is being replaced by the replica set. While the fundamental concept remains the same, there are minor differences between the two. In this lecture, we will focus on replica sets for all our demos and implementations going forward.
+
+### **How to Create a Replication Controller**
+
+To create a replication controller, we begin by creating a definition file. Let's name it **RC-definition.yaml**. Just like any Kubernetes definition file, it has four main sections:
+
+1. **API Version**
+2. **Kind**
+3. **Metadata**
+4. **Spec**
+
+#### **API Version**
+The replication controller is supported in Kubernetes API version **v1**, so we will set this to **v1**.
+
+#### **Kind**
+The kind is **ReplicationController**.
+
+#### **Metadata**
+In the metadata, we provide a name (e.g., **my-app-RC**) and some labels (e.g., `app: myapp`, `type: frontend`).
+
+#### **Spec**
+The **spec** section defines the inner workings of the object. For a replication controller, we define the following:
+- **replicas**: This specifies the number of pod replicas required.
+- **template**: This is a nested pod template used by the replication controller to create the replicas.
+
+Now, let's fill out the template section, which defines the pod. You can reuse the content of your previous pod definition and move it under the **template** section. The **template** section is indented to the right to signify that it’s a child of the **spec** section. It contains:
+- A **metadata** section with labels for the pod.
+- A **spec** section for defining the pod's containers, ports, etc.
+
+Lastly, add the number of replicas under the **replicas** field. Both the **template** and **replicas** sections are at the same indentation level under the **spec** section.
+
+Once the file is complete, use the following command to create the replication controller:
+```bash
+kubectl create -f RC-definition.yaml
+```
+
+### **Viewing Replication Controller and Pods**
+
+Once created, the replication controller will automatically create the required number of pods (e.g., three in this case). To view the replication controller:
+```bash
+kubectl get replicationcontroller
+```
+
+You can see the desired, current, and ready replicas in the output.
+
+To view the pods created by the replication controller, use:
+```bash
+kubectl get pods
+```
+
+The pod names will be prefixed with the replication controller name (e.g., **my-app-RC**).
+
+---
+
+### **Replica Set**
+
+A **Replica Set** is quite similar to a replication controller but has some important differences. The primary difference is that a replica set requires a **selector** definition. This selector helps the replica set identify which pods it manages, even if those pods were created before the replica set itself. This makes replica sets more flexible and allows them to manage pods created outside of the replica set.
+
+#### **Creating a Replica Set**
+
+To create a replica set, we follow similar steps:
+1. **API Version**: Use **apps/v1** instead of **v1**.
+2. **Kind**: Use **ReplicaSet**.
+3. **Metadata**: Provide a name and labels.
+4. **Spec**: Similar to replication controller, but the **selector** is now required. The selector matches the labels of the pods that the replica set will manage.
+
+Here is the basic structure for a replica set definition:
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: my-app-RS
+  labels:
+    app: myapp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: myapp-container
+          image: myapp-image
+```
+```yaml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: myapp
+  labels:
+    app: myapp
+    type: front-end
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+        type: front-end
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx
+```
+
+#### **Why is the Selector Important?**
+
+The **selector** in a replica set ensures that it only manages the correct pods. Even if there are existing pods created outside of the replica set, the replica set can manage them if they match the selector's labels.
+
+The **template** section is still necessary, even if pods already exist. This allows the replica set to create new pods if one fails.
+
+#### **Scaling a Replica Set**
+
+To scale a replica set, you can either:
+1. **Edit the replica count in the definition file** and use:
+   ```bash
+   kubectl replace -f replica-set-definition.yaml
+   ```
+2. **Use the `kubectl scale` command**:
+   ```bash
+   kubectl scale replicaSet my-app-RS --replicas=6
+   ```
+
+The `kubectl scale` command will update the number of replicas in the replica set, but it does not update the number in the definition file itself.
+
+#### **Labels and Selectors**
+
+Labels are used to tag Kubernetes objects, including pods. Selectors are used to filter these objects based on their labels. This becomes particularly useful for replica sets to identify the pods they should monitor and manage.
+
+---
+
+### **Commands Summary**
+
+Here’s a quick review of the commands you’ll need:
+- **Create**: 
+   ```bash
+   kubectl create -f <file.yaml>
+   ```
+- **Get replication controllers or replica sets**:
+   ```bash
+   kubectl get replicationcontrollers
+   kubectl get replicasets
+   ```
+- **Delete replication controller or replica set**:
+   ```bash
+   kubectl delete replicationcontroller <name>
+   kubectl delete replicasets <name>
+   ```
+- **Replace**: 
+   ```bash
+   kubectl replace -f <file.yaml>
+   ```
+- **Scale**:
+   ```bash
+   kubectl scale replicaSet <name> --replicas=<desired-count>
+   ```
+
+---
+
+### **Conclusion**
+
+In this lecture, we explored Kubernetes controllers, focusing on the **Replication Controller** and **Replica Set**. We discussed the differences between the two, how to create them, and how to scale them. Remember that replica sets offer additional flexibility with selectors and are now the recommended approach for managing pod replicas in Kubernetes.

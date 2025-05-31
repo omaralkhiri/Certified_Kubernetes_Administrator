@@ -1,0 +1,191 @@
+# Kubernetes Configuration Patching: A Guide to Modifying Labels
+
+This documentation provides an overview of how to modify labels in Kubernetes deployment configurations using JSON 6902 patches and Strategic Merge Patches. We will cover operations such as **replace**, **add**, and **remove** for keys within dictionaries and how these operations can be implemented with examples.
+
+## Updating a Key in a Dictionary Using JSON 6902 Patch
+
+Let’s begin by updating an existing key in a dictionary within a Kubernetes deployment configuration. In this example, we have a label `component: API` and want to update it to `component: web`.
+
+### Steps for JSON 6902 Patch:
+
+1. **Targeting the Kubernetes Object:**
+   In the `customization.yaml` file, specify the target object you want to match, in this case, a deployment configuration with the name `API-deployment`.
+
+   ```yaml
+   target:
+     kind: Deployment
+     name: API-deployment
+   ```
+
+2. **Operation - Replace:**
+   Since we are updating an existing key, the operation will be set to `replace`. This indicates we want to replace the current value with a new one.
+
+   ```yaml
+   patch:
+     - op: replace
+       path: /spec/template/metadata/labels/component
+       value: web
+   ```
+
+   Here, the `path` specifies the location of the label within the configuration. The `component` key will be replaced with the value `web`.
+
+3. **Result:**
+   The final configuration will have the label `component` updated to `web`.
+
+---
+
+## Updating a Key in a Dictionary Using Strategic Merge Patch
+
+In addition to JSON 6902 patches, we can use **Strategic Merge Patch** to achieve similar outcomes. This method works by merging the patch with the original configuration.
+
+### Steps for Strategic Merge Patch:
+
+1. **Separate File for Patch:**
+   Instead of writing patches inline, it is best practice to use a separate file to hold the patch. In this example, the patch will be in a file named `label-patch.yaml`.
+
+   `customization.yaml`:
+   ```yaml
+   patches:
+     - path: label-patch.yaml
+   ```
+
+2. **Create the Patch File (`label-patch.yaml`):**
+   In this patch file, copy the original `API-deployment.yaml` configuration and remove any properties that are not changing, keeping only the metadata and labels section.
+
+   ```yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: API-deployment
+   spec:
+     template:
+       metadata:
+         labels:
+           component: web  # Changed label
+   ```
+
+3. **Result:**
+   The Kubernetes deployment will be updated, and the label `component: API` will be replaced with `component: web`.
+
+---
+
+## Adding a Key to a Dictionary Using JSON 6902 Patch
+
+Now let’s explore how to **add** a new key to the labels dictionary. In this example, we have the existing label `component: API`, and we want to add a new label `org: codecloud`.
+
+### Steps for JSON 6902 Patch:
+
+1. **Operation - Add:**
+   To add a new key, we will change the operation to `add`. This indicates that we are introducing a new key to the dictionary.
+
+   ```yaml
+   patch:
+     - op: add
+       path: /spec/template/metadata/labels/org
+       value: codecloud
+   ```
+
+   The `path` specifies where the new key should be added, and `value` is the new key's value.
+
+2. **Result:**
+   The final result will be two labels: `component: API` and `org: codecloud`.
+
+---
+
+## Adding a Key to a Dictionary Using Strategic Merge Patch
+
+We can achieve the same result with a Strategic Merge Patch by modifying the label section directly.
+
+### Steps for Strategic Merge Patch:
+
+1. **Separate File for Patch:**
+   As before, we will use a separate file to store the patch (`label-patch.yaml`).
+
+   `customization.yaml`:
+   ```yaml
+   patches:
+     - path: label-patch.yaml
+   ```
+
+2. **Create the Patch File (`label-patch.yaml`):**
+   In this patch file, copy the original deployment configuration and add the new label under the `labels` section.
+
+   ```yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: API-deployment
+   spec:
+     template:
+       metadata:
+         labels:
+           component: API
+           org: codecloud  # New label added
+   ```
+
+3. **Result:**
+   After merging, the final result will have both `component: API` and `org: codecloud` labels.
+
+---
+
+## Removing a Key from a Dictionary Using JSON 6902 Patch
+
+Next, let’s see how to **remove** a key from the dictionary. Suppose we want to remove the label `org: codecloud` while keeping `component: API`.
+
+### Steps for JSON 6902 Patch:
+
+1. **Operation - Remove:**
+   To remove a key, the operation will be set to `remove`. The path must specify the label you want to delete.
+
+   ```yaml
+   patch:
+     - op: remove
+       path: /spec/template/metadata/labels/org
+   ```
+
+   This will delete the `org` label.
+
+2. **Result:**
+   The final result will have only one label: `component: API`.
+
+---
+
+## Removing a Key from a Dictionary Using Strategic Merge Patch
+
+For removing a key using Strategic Merge Patch, we can set the value of the key to `null`.
+
+### Steps for Strategic Merge Patch:
+
+1. **Separate File for Patch:**
+   Again, we will use a separate patch file.
+
+   `customization.yaml`:
+   ```yaml
+   patches:
+     - path: label-patch.yaml
+   ```
+
+2. **Create the Patch File (`label-patch.yaml`):**
+   In the patch file, set the `org` label to `null` under the `labels` section.
+
+   ```yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: API-deployment
+   spec:
+     template:
+       metadata:
+         labels:
+           component: API
+           org: null  # Remove org key by setting it to null
+   ```
+
+3. **Result:**
+   The final configuration will have only the label `component: API`, with `org` removed.
+
+---
+
+## Conclusion
+
+In this guide, we demonstrated how to perform basic operations on Kubernetes deployment configurations, such as replacing, adding, and removing labels using both JSON 6902 patches and Strategic Merge Patches. These techniques are essential for managing and modifying Kubernetes configurations in an automated and consistent manner.

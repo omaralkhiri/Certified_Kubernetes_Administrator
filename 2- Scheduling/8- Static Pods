@@ -1,0 +1,105 @@
+### Documentation: Static Pods in Kubernetes
+
+In this section, we will explore **Static Pods** in Kubernetes and how they differ from regular pods managed by the Kubernetes control plane. We will also discuss the role of the Kubelet in managing static pods and how they work when a node is part of a Kubernetes cluster.
+
+---
+
+#### **What are Static Pods?**
+
+In Kubernetes, a **static pod** is a pod that is managed directly by the Kubelet on a specific node, without the intervention of the Kubernetes API server, scheduler, or other components. Static pods are typically used in scenarios where the node must independently manage its own pods, such as when setting up a node in isolation (without a master or Kubernetes cluster).
+
+The **Kubelet** is responsible for managing the lifecycle of static pods. When the Kubelet runs on a node, it checks a specified directory for pod definition files. It reads these files and creates the pods locally. If the pod crashes or is terminated, the Kubelet attempts to restart the pod. Changes to the definition file (such as updates to the pod configuration) are detected by the Kubelet, which will automatically recreate the pod to apply the changes.
+
+---
+
+#### **How do Static Pods Work?**
+
+Static pods are independent of the Kubernetes control plane (API server, scheduler, etc.). They do not rely on the Kubernetes master node, and they are created directly by the Kubelet based on pod definition files placed in a specific directory.
+
+1. **Pod Definition Files**:
+   - The Kubelet looks for pod definition files in a designated directory (called the **pod manifest path**). These files are YAML or JSON files that describe the pod specifications.
+   - The Kubelet periodically checks this directory, reads the files, and creates the corresponding pods on the node.
+
+2. **Kubelet's Role**:
+   - The Kubelet operates independently and can create and manage static pods even in the absence of a Kubernetes cluster.
+   - The Kubelet also ensures that the pod stays alive. If the application in the pod crashes, the Kubelet attempts to restart it automatically.
+   - If a pod definition file is modified or deleted, the Kubelet will recreate or remove the corresponding pod.
+
+3. **Pod Manifest Path**:
+   - The **pod manifest path** is the directory on the node where pod definition files are placed. This path is configured when starting the Kubelet.
+   - By default, the pod manifest path is set to `/etc/kubernetes/manifests`.
+   - The Kubelet checks this directory for files and creates static pods accordingly.
+
+---
+
+#### **Creating Static Pods Without the Kubernetes Control Plane**
+
+Without a Kubernetes control plane (i.e., no API server, scheduler, etc.), the Kubelet can still function independently to manage pods. This is useful in isolated environments where the node must manage its own pods.
+
+- You configure the Kubelet to read pod definition files from a directory on the local host.
+- As there is no API server, the usual `kubectl` command cannot be used to interact with the static pods. Instead, you use **Docker** commands (or the container runtime of your choice) to manage and view the static pods:
+  ```bash
+  docker ps
+  ```
+  This command shows the running containers on the node, including the static pods created by the Kubelet.
+
+---
+
+#### **How Static Pods Work in a Clustered Environment**
+
+When a node is part of a Kubernetes cluster, the Kubelet can still manage both **static pods** and **pods requested by the API server**.
+
+1. **API Server Awareness**:
+   - Even though the Kubelet creates static pods independently, the Kubernetes API server is aware of them.
+   - The Kubelet creates a **mirror pod** for each static pod, which is a read-only representation of the pod in the API server.
+   - You can view these mirror pods by running `kubectl get pods`, but you cannot modify or delete them through the API server. Modifications must be done by updating the pod definition files on the node.
+
+2. **Pod Naming Convention**:
+   - The name of the static pod is automatically appended with the node name to uniquely identify it within the cluster (e.g., `elasticsearch-node01`).
+
+---
+
+#### **Use Cases for Static Pods**
+
+Static pods are commonly used in situations where the Kubernetes control plane is required to run on individual nodes. For example:
+
+- **Kubernetes Control Plane**:
+  - Static pods can be used to deploy the core components of the Kubernetes control plane (e.g., the API server, controller manager, scheduler) directly on the master node.
+  - These control plane components are usually deployed as static pods because they do not rely on the API server for management.
+  - The Kubelet automatically restarts these components if they crash, ensuring high availability for the control plane.
+
+---
+
+#### **Static Pods vs. DaemonSets**
+
+While both static pods and DaemonSets ensure that a pod runs on every node in a cluster, there are key differences between them:
+
+- **Static Pods**:
+  - Created directly by the Kubelet based on pod definition files placed in a specific directory.
+  - Do not rely on the Kubernetes API server or the scheduler.
+  - Typically used for deploying control plane components or other essential services that must run independently of the control plane.
+
+- **DaemonSets**:
+  - Managed by the Kubernetes API server and scheduler.
+  - Ensure that one copy of a pod is running on every node in the cluster.
+  - Can be updated or deleted through the Kubernetes control plane using `kubectl`.
+
+---
+
+#### **Configuring the Kubelet for Static Pods**
+
+To configure static pods, you must specify the **pod manifest path** option when starting the Kubelet. This can be done in two ways:
+
+1. **Direct Configuration in Kubelet Service**:
+   - The Kubelet is configured with the `--pod-manifest-path` option to specify the directory where the pod definition files are located.
+   
+2. **Configuration through a Config File**:
+   - Alternatively, you can use a configuration file (specified with the `--config` option) and define the **static-pod-path** in the file.
+
+---
+
+#### **Conclusion**
+
+Static pods offer a way to run pods on a node without requiring a full Kubernetes control plane. The Kubelet manages static pods independently by reading pod definition files placed in a specific directory on the node. These pods can be used to deploy critical components like the Kubernetes control plane on individual nodes. Understanding how static pods work and how they differ from DaemonSets and other types of pods is crucial for managing Kubernetes clusters effectively, especially in environments where the control plane is self-managed.
+
+cat /var/lib/kubelet/config.yaml

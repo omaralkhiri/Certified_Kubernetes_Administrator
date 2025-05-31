@@ -1,0 +1,147 @@
+# Kubernetes Network Policies
+
+## Overview
+Kubernetes Network Policies allow you to control the communication between pods within a cluster. By default, Kubernetes permits all traffic between pods. However, you can enforce restrictions using network policies to enhance security and compliance.
+
+## Use Case: Protecting the Database Pod
+In this scenario, we want to protect the database pod by allowing access only from the API pod and only on port **3306** (MySQL). Other pods, including the web pod, should not be able to communicate with the database pod. The API pod and the web pod can communicate freely with any other pods, but the database pod needs strict restrictions.
+
+## Step 1: Blocking All Traffic to the Database Pod
+The first step is to create a **network policy** that blocks all incoming and outgoing traffic to the database pod. This is done using **pod selectors** to associate the policy with the database pod.
+
+### Example Policy to Block All Traffic:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-db
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+    - Ingress
+    - Egress
+```
+
+## Step 2: Allowing API Pod to Connect to the Database Pod
+Since the API pod needs to query the database, we must allow ingress traffic from the API pod to the database pod on port **3306**.
+
+### Example Policy for Allowing API Pod Access:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-to-db
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: api
+      ports:
+        - protocol: TCP
+          port: 3306
+  policyTypes:
+    - Ingress
+```
+
+## Step 3: Restricting API Access to a Specific Namespace
+If there are multiple API pods across different namespaces (e.g., `dev`, `test`, `prod`), the current policy allows any pod with the `role=api` label to access the database pod. To restrict access to only the API pod in the `prod` namespace, we:
+1. Use a `namespaceSelector` to match only the `prod` namespace.
+2. Combine `podSelector` and `namespaceSelector` to enforce access control.
+
+### Example Policy for Namespace Restriction:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prod-api-to-db
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: api
+          namespaceSelector:
+            matchLabels:
+              environment: prod
+      ports:
+        - protocol: TCP
+          port: 3306
+  policyTypes:
+    - Ingress
+```
+
+> **Note:** The `namespaceSelector` works only if labels are assigned to the namespace.
+
+## Step 4: Allowing External Access from a Backup Server
+If an external backup server (outside Kubernetes) needs access to the database pod, `podSelector` and `namespaceSelector` won't work. Instead, we use an **IP block** to allow traffic from a specific IP range.
+
+### Example Policy for External Access:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backup-server
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 192.168.5.10/32
+      ports:
+        - protocol: TCP
+          port: 3306
+  policyTypes:
+    - Ingress
+```
+
+## Step 5: Configuring Egress for Outbound Traffic
+If the database pod needs to send data to an external backup server, an **egress rule** is required. The `egress` section works similarly to `ingress`, except:
+- The `to` field defines the destination.
+- The IP block and port for the external backup server are specified.
+
+### Example Egress Policy:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-to-backup
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.5.10/32
+      ports:
+        - protocol: TCP
+          port: 80
+  policyTypes:
+    - Egress
+```
+
+## Key Takeaways
+- **Network Policies** enforce security rules at the pod level.
+- **Ingress** rules control incoming traffic; **egress** rules control outgoing traffic.
+- **PodSelector** and **NamespaceSelector** filter traffic based on labels.
+- **IPBlock** allows communication with external resources.
+- A policy with multiple conditions uses **AND** logic within a rule and **OR** logic across multiple rules.
+
+By carefully defining network policies, you can enhance security, ensure compliance, and restrict unnecessary access within your Kubernetes cluster. Now, proceed to the lab and practice implementing these policies!
+

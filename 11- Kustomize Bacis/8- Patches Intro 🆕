@@ -1,0 +1,211 @@
+# Kubernetes Patches Documentation
+
+This document provides an overview of using **customized patches** in Kubernetes to modify configurations at a granular level. Unlike common transformers, which apply configurations broadly across Kubernetes resources, patches offer a more targeted, surgical approach to altering specific sections of a resource. 
+
+## Introduction to Patches
+
+When managing Kubernetes resources, there are times when you need to make adjustments to a specific object or set of objects, without affecting the entire cluster. While common transformers are ideal for applying configurations across the board (e.g., adding a label or assigning a namespace to all objects), **customized patches** allow you to target and modify only certain attributes of specific Kubernetes resources. 
+
+For instance, if you need to change the number of replicas in a deployment, you would use a **customized patch** to adjust just that value, without impacting other aspects of the configuration.
+
+## Creating a Patch
+
+To create a patch, you must define three parameters:
+1. **Operation Type**: This specifies what action should be taken.
+2. **Target**: This defines the criteria for matching the resource to patch.
+3. **Value**: The new value that will be added, removed, or replaced.
+
+### 1. Operation Type
+The most common operations used for patches are:
+- **Add**: Adds a new element to an existing list or field.
+    - Example: Adding a container to the list of containers in a deployment.
+- **Remove**: Removes an existing element from a list or field.
+    - Example: Removing a container from the list or deleting a label.
+- **Replace**: Replaces the existing value with a new one.
+    - Example: Updating the number of replicas in a deployment from 5 to 10.
+
+### 2. Target
+The target defines which Kubernetes resource the patch will apply to. The match criteria can include:
+- **Kind**: The resource type (e.g., `Deployment`, `Pod`).
+- **Name**: The name of the resource.
+- **Namespace**: The namespace of the resource.
+- **Label Selector**: Match based on resource labels.
+- **Annotation Selector**: Match based on resource annotations.
+- You can combine multiple match criteria to target a specific set of resources.
+
+### 3. Value
+The value specifies what will be replaced or added in the patch. For an **Add** or **Replace** operation, you must specify the new value. For a **Remove** operation, no value is provided, as you are simply removing an existing resource or property.
+
+---
+
+## Example: Customized Patch for Deployment Name Update
+
+Let’s walk through an example where we want to modify the name of a deployment from `api-deployment` to `web-deployment`.
+
+### Original Deployment YAML
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: my-container
+        image: nginx
+```
+
+### Customization YAML for the Patch
+
+```yaml
+patches:
+  - target:
+      kind: Deployment
+      name: api-deployment
+    patch: |
+      - op: replace
+        path: /metadata/name
+        value: web-deployment
+```
+
+In this example:
+- We specify the target resource using the `kind` and `name` fields, which will match the deployment named `api-deployment`.
+- We use the **replace** operation to update the `name` field under `metadata`.
+- The patch replaces the name with `web-deployment`.
+
+### Final Result
+
+After applying the patch, the `name` field of the deployment is updated to `web-deployment`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: my-container
+        image: nginx
+```
+
+---
+
+## Example: Customized Patch for Replica Count Update
+
+Now, let's look at an example where we change the number of replicas in a deployment from 1 to 5.
+
+### Original Deployment YAML
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: my-container
+        image: nginx
+```
+
+### Customization YAML for the Patch
+
+```yaml
+patches:
+  - target:
+      kind: Deployment
+      name: api-deployment
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 5
+```
+
+In this case:
+- We specify the target resource to match the deployment `api-deployment`.
+- We use the **replace** operation to change the `replicas` value.
+- The patch updates the replica count from `1` to `5`.
+
+### Final Result
+
+After applying the patch, the deployment’s replica count is updated to `5`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 5
+  template:
+    spec:
+      containers:
+      - name: my-container
+        image: nginx
+```
+
+---
+
+## Patch Types
+
+### JSON 6902 Patch
+
+The JSON 6902 patch is the most common patch type in Kubernetes and involves specifying the following:
+- **Target**: Defines the resource to patch.
+- **Patch Details**: Defines the operation (add, remove, replace), the specific property to update, and the new value.
+
+Example of a JSON 6902 patch:
+
+```yaml
+patches:
+  - target:
+      kind: Deployment
+      name: api-deployment
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 5
+```
+
+### Strategic Merge Patch
+
+A strategic merge patch uses a more familiar approach by leveraging the original Kubernetes YAML configuration. You provide a partial configuration that reflects only the changes you want to apply, and Kubernetes will merge it with the existing configuration.
+
+#### Example of a Strategic Merge Patch
+
+```yaml
+patches:
+  - target:
+      kind: Deployment
+      name: api-deployment
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: api-deployment
+      spec:
+        replicas: 5
+```
+
+This patch works by merging the provided configuration with the existing one, updating the `replicas` field while preserving all other configurations.
+
+### Benefits of Strategic Merge Patch:
+- Uses standard Kubernetes configurations, making it easier to read and maintain.
+- Automatically handles merging with the original resource, so you don’t need to manually track the changes.
+- Particularly useful when you are comfortable working with Kubernetes YAML files and want a more intuitive way to define patches.
+
+---
+
+## Conclusion
+
+Patches in Kubernetes offer a flexible and efficient way to modify configurations at a granular level. By using customized patches, you can apply changes to specific resources, whether by adding, removing, or replacing values. Depending on your preferences, you can choose between the **JSON 6902 patch** for a more explicit and structured approach, or the **strategic merge patch** for a more intuitive, YAML-based method.
+
+Both methods are powerful, and you can use them based on the needs of your project, with the option to mix and match as needed.

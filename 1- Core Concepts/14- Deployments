@@ -1,0 +1,147 @@
+### Documentation on Kubernetes Deployments
+
+#### Overview
+
+Kubernetes Deployments provide a higher-level abstraction for managing applications, enabling advanced deployment strategies, such as rolling updates, and allowing you to perform versioned updates and rollbacks with ease. They are designed to manage the lifecycle of applications, ensure high availability, and provide easy scaling and upgrades for production environments.
+
+#### Use Cases
+
+1. **Multiple Application Instances**: A deployment ensures that multiple instances of an application (e.g., web server) are running simultaneously in a production environment to ensure high availability.
+   
+2. **Seamless Upgrades**: With newer versions of application builds (e.g., Docker containers), deployments allow for seamless upgrades with **rolling updates**, ensuring that users are not impacted by sudden changes.
+
+3. **Rollbacks**: In case an upgrade introduces unexpected errors, Kubernetes deployments allow you to easily **roll back** to the previous version.
+
+4. **Environment Changes**: When needing to upgrade components (e.g., web server versions), scale the environment, or modify resource allocations, deployments allow you to make changes together and apply them without causing disruptions.
+
+#### Creating a Kubernetes Deployment
+
+To create a Kubernetes deployment, you need to define a deployment file in YAML format. This file includes metadata (name and labels), the API version (usually `apps/v1`), and the specification (`spec`) containing information about the pod template, replicas, and selectors.
+
+Here is an example of a simple deployment YAML definition:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-web-app
+  labels:
+    app: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web-container
+        image: my-web-app:v1
+        ports:
+        - containerPort: 80
+```
+
+After defining the deployment file, use the following command to create the deployment:
+
+```bash
+kubectl create -f deployment-definition.yaml
+```
+
+#### Viewing and Managing Deployments
+
+Once the deployment is created, you can view its status and related resources:
+
+1. To see all the deployments:
+   ```bash
+   kubectl get deployments
+   ```
+
+2. To check the replica sets created by the deployment:
+   ```bash
+   kubectl get replica sets
+   ```
+
+3. To see the pods created by the deployment:
+   ```bash
+   kubectl get pods
+   ```
+
+#### Rolling Updates and Rollbacks
+
+Kubernetes deployments offer **rolling updates**, where updates are applied gradually to avoid downtime. If any error is detected during the update, Kubernetes allows you to **rollback** the deployment to a previous stable state.
+
+To update the deployment, you can modify the container image or other configurations and then apply the changes:
+
+```bash
+kubectl apply -f deployment-definition.yaml
+```
+
+To rollback the deployment to a previous version:
+
+```bash
+kubectl rollout undo deployment/my-web-app
+```
+
+#### Pausing and Resuming Deployments
+
+In some cases, you might want to **pause** a deployment to apply changes later:
+
+```bash
+kubectl rollout pause deployment/my-web-app
+```
+
+After making the necessary changes, you can **resume** the deployment:
+
+```bash
+kubectl rollout resume deployment/my-web-app
+```
+
+#### Scaling a Deployment
+
+You can easily scale the number of replicas in a deployment:
+
+1. By modifying the `replicas` field in the deployment YAML file and running:
+
+   ```bash
+   kubectl apply -f deployment-definition.yaml
+   ```
+
+2. By using the `kubectl scale` command to change the number of replicas:
+
+   ```bash
+   kubectl scale deployment/my-web-app --replicas=5
+   ```
+
+#### Viewing All Created Objects
+
+To view all the objects related to the deployment (such as the deployment, replica set, and pods), use the following command:
+
+```bash
+kubectl get all
+```
+
+#### Conclusion
+
+Kubernetes deployments are powerful tools that simplify the management of applications in production environments. They provide rolling updates, rollbacks, scaling, and the ability to apply multiple changes at once, ensuring your applications are always running smoothly and can evolve with minimal downtime.
+
+
+Create a deployment
+
+kubectl create deployment --image=nginx nginx
+Generate Deployment YAML file (-o yaml). Don’t create it(–dry-run)
+
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml
+Generate Deployment YAML file (-o yaml). Don’t create it(–dry-run) and save it to a file.
+
+kubectl create deployment --image=nginx nginx --dry-run=client -o yaml > nginx-deployment.yaml
+Make necessary changes to the file (for example, adding more replicas) and then create the deployment.
+
+kubectl create -f nginx-deployment.yaml
+OR
+
+In k8s version 1.19+, we can specify the –replicas option to create a deployment with 4 replicas.
+
+kubectl create deployment --image=nginx nginx --replicas=4 --dry-run=client -o yaml > nginx-deployment.yaml

@@ -1,0 +1,130 @@
+### Persistent Volume Claims in Kubernetes
+
+#### Introduction
+Hello and welcome to this lecture on persistent volume claims (PVCs) in Kubernetes. In the previous lecture, we created a persistent volume (PV). Now, we will create a persistent volume claim to make the storage available to a node.
+
+#### Persistent Volume Claims Overview
+Persistent volumes (PVs) and persistent volume claims (PVCs) are two separate objects in the Kubernetes namespace:
+- An **administrator** creates a set of persistent volumes.
+- A **user** creates persistent volume claims to use the storage.
+
+Once a PVC is created, Kubernetes binds it to a PV based on the request and the properties set on the volume. 
+
+#### Binding Process
+1. **Matching Criteria**
+   During the binding process, Kubernetes tries to find a PV that meets the following criteria:
+   - Sufficient capacity as requested by the claim.
+   - Matching properties such as access modes, volume modes, and storage class.
+
+2. **Multiple Matches**
+   If there are multiple possible matches for a single claim, labels and selectors can be used to bind the PVC to a specific PV.
+
+3. **One-to-One Relationship**
+   Every PVC is bound to a single PV. If a smaller claim is bound to a larger volume, no other claims can utilize the remaining capacity in the volume.
+
+4. **Pending State**
+   If no suitable volumes are available, the PVC will remain in a pending state. Once new volumes are added to the cluster, the claim will automatically bind to a suitable volume.
+
+#### Creating a Persistent Volume Claim
+Here is an example of creating a PVC:
+
+1. **Define the PVC in YAML**
+   ```yaml
+   apiVersion: v1
+   kind: PersistentVolumeClaim
+   metadata:
+     name: my-claim
+   spec:
+     accessModes:
+       - ReadWriteOnce
+     resources:
+       requests:
+         storage: 500Mi
+   ```
+
+2. **Apply the Configuration**
+   Save the YAML file as `pvc.yaml` and run the following command:
+   ```bash
+   kubectl apply -f pvc.yaml
+   ```
+
+3. **View the PVC**
+   Check the status of the PVC using:
+   ```bash
+   kubectl get persistentvolumeclaim
+   ```
+   Initially, the PVC may be in a pending state. Kubernetes will look for a matching PV. If a PV with the required capacity and access mode is found, the PVC will be bound to it.
+
+4. **Verify Binding**
+   Run the following command to verify that the PVC is bound to a PV:
+   ```bash
+   kubectl get persistentvolume
+   ```
+
+#### Deleting a PVC
+To delete a PVC, run:
+```bash
+kubectl delete persistentvolumeclaim my-claim
+```
+
+#### What Happens to the PV?
+When a PVC is deleted, the fate of the underlying PV depends on its **reclaim policy**:
+1. **Retain (Default)**
+   - The PV is retained even after the PVC is deleted.
+   - It must be manually deleted by the administrator and is not available for reuse by other claims.
+
+2. **Delete**
+   - The PV is automatically deleted along with the PVC, freeing up storage on the underlying storage device.
+
+3. **Recycle**
+   - The data on the PV is scrubbed, and the volume is made available for reuse by other claims.
+
+#### Example: PVC Binding to PV
+1. **Create a PV**
+   ```yaml
+   apiVersion: v1
+   kind: PersistentVolume
+   metadata:
+     name: pv-vol1
+   spec:
+     capacity:
+       storage: 1Gi
+     accessModes:
+       - ReadWriteOnce
+     hostPath:
+       path: /mnt/data
+   ```
+   Apply the configuration:
+   ```bash
+   kubectl apply -f pv.yaml
+   ```
+
+2. **Create a PVC**
+   ```yaml
+   apiVersion: v1
+   kind: PersistentVolumeClaim
+   metadata:
+     name: my-claim
+   spec:
+     accessModes:
+       - ReadWriteOnce
+     resources:
+       requests:
+         storage: 500Mi
+   ```
+   Apply the configuration:
+   ```bash
+   kubectl apply -f pvc.yaml
+   ```
+
+3. **Verify Binding**
+   Use the following commands to confirm:
+   ```bash
+   kubectl get persistentvolumeclaim
+   kubectl get persistentvolume
+   ```
+   You will see that the PVC is bound to the PV.
+
+#### Summary
+Persistent volume claims provide a way for users to request storage from preconfigured persistent volumes in Kubernetes. By binding claims to volumes, Kubernetes simplifies storage management and ensures consistency. In the next section, practice configuring and troubleshooting PVCs to gain hands-on experience.
+

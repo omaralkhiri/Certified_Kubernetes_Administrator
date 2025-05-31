@@ -1,0 +1,177 @@
+# **Kubernetes Pod Networking Documentation**
+
+## **1. Introduction**
+Kubernetes networking is a critical component that ensures seamless communication between pods, nodes, and external services. Unlike traditional networking, Kubernetes requires a unique approach where each pod gets its own IP address and can communicate with other pods across nodes without Network Address Translation (NAT). This document explains the fundamentals of Kubernetes pod networking, the requirements, and how to implement a basic networking solution using Linux networking concepts.
+
+---
+
+## **2. Kubernetes Networking Requirements**
+Kubernetes imposes strict networking requirements to ensure consistent and reliable pod communication:
+
+1. **Unique IP per Pod**  
+   - Every pod must have a unique IP address within the cluster.
+   - This IP should be reachable from any other pod, regardless of the node it runs on.
+
+2. **Pod-to-Pod Communication**  
+   - Pods on the **same node** must communicate directly using their assigned IPs.
+   - Pods on **different nodes** must communicate without NAT.
+
+3. **No Manual Network Configuration**  
+   - Kubernetes does not provide a built-in networking solution but expects administrators to implement one that meets these requirements.
+
+---
+
+## **3. Network Architecture Overview**
+### **3.1 Node Networking**
+- Each node has an **external IP** (e.g., `192.168.1.11`, `192.168.1.12`, `192.168.1.13`).
+- Nodes communicate over this network for control plane operations (API server, etcd, kubelet).
+
+### **3.2 Pod Networking**
+- Each node has an **internal bridge network** (e.g., `br0`) for pod communication.
+- Pods are assigned IPs from a **private subnet** (e.g., `10.244.1.0/24`, `10.244.2.0/24`, `10.244.3.0/24`).
+- All pod subnets collectively form a **larger cluster network** (`10.244.0.0/16`).
+
+---
+
+## **4. Implementing Pod Networking**
+### **4.1 Setting Up Bridge Networks**
+1. **Create a Bridge on Each Node**  
+   ```bash
+   ip link add br0 type bridge
+   ip link set br0 up
+   ```
+2. **Assign Subnet IP to the Bridge**  
+   ```bash
+   ip addr add 10.244.1.1/24 dev br0  # On Node 1
+   ip addr add 10.244.2.1/24 dev br0  # On Node 2
+   ip addr add 10.244.3.1/24 dev br0  # On Node 3
+   ```
+
+### **4.2 Connecting Pods to the Bridge**
+When a pod is created, Kubernetes creates a **network namespace** for it. To connect it to the bridge:
+
+1. **Create a veth Pair (Virtual Ethernet Cable)**  
+   ```bash
+   ip link add veth0 type veth peer name veth1
+   ```
+2. **Attach One End to the Pod’s Namespace**  
+   ```bash
+   ip link set veth0 netns <pod_namespace>
+   ```
+3. **Attach the Other End to the Bridge**  
+   ```bash
+   ip link set veth1 master br0
+   ```
+4. **Assign an IP to the Pod**  
+   ```bash
+   ip netns exec <pod_namespace> ip addr add 10.244.1.2/24 dev veth0
+   ```
+5. **Bring the Interface Up**  
+   ```bash
+   ip netns exec <pod_namespace> ip link set veth0 up
+   ip link set veth1 up
+   ```
+6. **Set Default Gateway**  
+   ```bash
+   ip netns exec <pod_namespace> ip route add default via 10.244.1.1
+   ```
+
+### **4.3 Enabling Cross-Node Pod Communication**
+Since pods on different nodes belong to different subnets, nodes must know how to route traffic.
+
+1. **Add Routes on Each Node**  
+   - On **Node 1** (`192.168.1.11`):  
+     ```bash
+     ip route add 10.244.2.0/24 via 192.168.1.12
+     ip route add 10.244.3.0/24 via 192.168.1.13
+     ```
+   - On **Node 2** (`192.168.1.12`):  
+     ```bash
+     ip route add 10.244.1.0/24 via 192.168.1.11
+     ip route add 10.244.3.0/24 via 192.168.1.13
+     ```
+   - On **Node 3** (`192.168.1.13`):  
+     ```bash
+     ip route add 10.244.1.0/24 via 192.168.1.11
+     ip route add 10.244.2.0/24 via 192.168.1.12
+     ```
+
+2. **Alternative: Centralized Routing (Using a Router)**  
+   - Instead of configuring routes on every node, a **router** can be used as the default gateway.
+   - All nodes forward pod traffic to the router, which maintains routes for all pod subnets.
+
+---
+
+## **5. Automating Networking with CNI (Container Network Interface)**
+Manually configuring networking is impractical for large clusters. Kubernetes uses **CNI** to automate networking when pods are created/deleted.
+
+### **5.1 CNI Script Structure**
+A CNI-compliant script has two main functions:
+- **Add**: Configures networking when a pod is created.
+- **Delete**: Cleans up networking when a pod is deleted.
+
+Example (`custom-cni-plugin.sh`):
+```bash
+#!/bin/bash
+
+# CNI ADD operation
+add() {
+    # Attach veth pair to pod and bridge
+    ip link add veth0 type veth peer name veth1
+    ip link set veth0 netns $CNI_NETNS
+    ip link set veth1 master br0
+    ip netns exec $CNI_NETNS ip addr add $CNI_IP dev veth0
+    ip netns exec $CNI_NETNS ip link set veth0 up
+    ip link set veth1 up
+    ip netns exec $CNI_NETNS ip route add default via $BRIDGE_IP
+}
+
+# CNI DELETE operation
+delete() {
+    # Clean up veth pair
+    ip netns exec $CNI_NETNS ip link del veth0
+}
+
+case $1 in
+    add) add ;;
+    del) delete ;;
+    *) echo "Usage: $0 {add|del}" ;;
+esac
+```
+
+### **5.2 How CNI Works in Kubernetes**
+1. **CNI Configuration**  
+   - Kubernetes passes CNI config to the container runtime (e.g., `containerd`, `CRI-O`).
+   - The config specifies the CNI plugin to use (`custom-cni-plugin.sh`).
+
+2. **CNI Execution Flow**  
+   - When a pod is created, the runtime calls the CNI plugin with `add`.
+   - When a pod is deleted, the runtime calls the CNI plugin with `del`.
+
+---
+
+## **6. Comparison with Existing Solutions**
+Several CNI plugins automate Kubernetes networking:
+- **Flannel**: Uses a simple overlay network (VXLAN).
+- **Calico**: Uses BGP for routing without overlays.
+- **Weave Net**: Creates a mesh network between nodes.
+- **Cilium**: Uses eBPF for high-performance networking.
+
+Our manual approach mimics what these plugins do automatically.
+
+---
+
+## **7. Conclusion**
+- Kubernetes requires **each pod to have a unique IP**.
+- **Bridge networks + routing** enable pod communication within and across nodes.
+- **CNI automates** networking setup when pods are created/deleted.
+- For production clusters, use **established CNI plugins** (Flannel, Calico, etc.) instead of manual configuration.
+
+---
+
+## **8. Next Steps**
+- Explore **CNI plugins** like Flannel or Calico.
+- Learn about **Service Networking** (ClusterIP, NodePort, LoadBalancer).
+- Study **Network Policies** for security.
+
+This document provides a foundational understanding of Kubernetes pod networking, helping administrators design and troubleshoot cluster networking effectively.

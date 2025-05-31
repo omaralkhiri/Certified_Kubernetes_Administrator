@@ -1,0 +1,119 @@
+# Helm Lifecycle Management Documentation
+
+## Introduction
+
+Lifecycle management in Helm refers to the management and evolution of releases throughout their lifecycle, such as installation, upgrades, and rollbacks. A release represents a deployed version of a Helm chart, which includes a collection of Kubernetes objects. Helm tracks each release’s state, making it easy to manage and maintain over time without interfering with other releases, even if they are based on the same chart.
+
+In this document, we will discuss how Helm manages the lifecycle of a release, using a practical example of upgrading and rolling back a release.
+
+## Key Concepts
+
+- **Release**: A release is a deployment of a Helm chart that represents a set of Kubernetes objects deployed to your cluster. Each release is identified by a name, and each upgrade or modification of a release results in a new version.
+  
+- **Revision**: Every time you upgrade a release, Helm assigns a new revision number. Helm keeps track of all revisions, allowing you to roll back to previous states.
+
+- **Upgrade**: Helm allows you to upgrade a release, updating the deployed Kubernetes objects, and managing the changes in a single command.
+
+- **Rollback**: Rollback allows you to revert a release to a previous state, reverting Kubernetes objects to how they were in an earlier revision.
+
+## Example Workflow: Managing NGINX Release
+
+Let's walk through the steps of managing a release lifecycle with Helm.
+
+### Step 1: Install the Initial Version of NGINX
+
+Suppose we want to install an old version of the NGINX chart. We can specify the exact version of the chart we want to install using the `--version` option with the `helm install` command. For example:
+
+```bash
+helm install nginx-release stable/nginx --version 1.19.2
+```
+
+This command installs the NGINX chart and creates a release called `nginx-release`. At this point, Helm tracks the release and the associated Kubernetes objects.
+
+### Step 2: Check the Version of NGINX Running
+
+To check the version of NGINX running in our cluster, we first need to find the pod running the NGINX deployment. We use the following commands to get the pod's name and check the details:
+
+```bash
+kubectl get pods
+kubectl describe pod <nginx-pod-name>
+```
+
+In the `describe` output, we see that the NGINX version is 1.19.2, which is the initial version we installed.
+
+### Step 3: Upgrade the NGINX Release
+
+Over time, new versions of NGINX are released, and our installation might need to be upgraded. We can use the `helm upgrade` command to upgrade our release:
+
+```bash
+helm upgrade nginx-release stable/nginx
+```
+
+This command will upgrade the `nginx-release` to the latest version of the NGINX chart. When upgrading, Helm will replace the old pod with a new one running the updated version of NGINX.
+
+### Step 4: Verify the Upgrade
+
+To verify the upgrade, we need to check the pod again:
+
+```bash
+kubectl get pods
+kubectl describe pod <new-nginx-pod-name>
+```
+
+We now see that the NGINX version has been updated to 1.21.4, confirming the upgrade was successful.
+
+### Step 5: View Release History
+
+You can view the history of a release using the `helm history` command. This provides a detailed list of revisions, showing the changes made to the release over time:
+
+```bash
+helm history nginx-release
+```
+
+The output shows the revision history, including the chart version, app version, and the action (install, upgrade, or rollback) performed at each stage. This helps to track the lifecycle of the release.
+
+### Step 6: Rollback to a Previous Version
+
+If the upgrade introduces issues or you prefer to revert to a previous version, Helm provides the `helm rollback` command. For example, to roll back to revision 1, we use:
+
+```bash
+helm rollback nginx-release 1
+```
+
+This command restores the release to revision 1, effectively reverting the deployed Kubernetes objects to their state at that time.
+
+### Step 7: Verify the Rollback
+
+After the rollback, verify the pod’s details again:
+
+```bash
+kubectl get pods
+kubectl describe pod <nginx-pod-name>
+```
+
+We now see that the NGINX version has reverted to 1.19.2, as specified in revision 1.
+
+### Step 8: List All Revisions
+
+You can list all revisions of a release using the following command:
+
+```bash
+helm history nginx-release
+```
+
+This shows a list of all revisions, with information about the chart version, app version, and the action taken (install, upgrade, rollback).
+
+## Important Notes
+
+1. **Rollback Mechanics**: When rolling back to a previous revision, Helm does not restore the release to its exact original state. Instead, it creates a new revision (e.g., revision 3) with the configuration from the previous revision. This allows for a clear history of changes and helps track what has been done to the release over time.
+
+2. **Backup and Restore**: Helm’s rollback functionality primarily manages Kubernetes object configurations (such as deployments, services, etc.). However, it does not back up or restore persistent data such as databases or files stored in persistent volumes. For backing up and restoring data, you need to rely on separate backup strategies or use chart hooks to integrate with backup tools.
+
+3. **Complex Upgrades**: Some applications, such as WordPress or databases, may require additional parameters or permissions to upgrade, such as administrative access to databases. In these cases, Helm might not be able to complete the upgrade without manual intervention. Always check the release’s documentation for specific upgrade instructions.
+
+4. **Persistent Volumes**: Rollbacks do not affect persistent data stored in volumes. If you need to restore data (such as a MySQL database), you'll need to use specific backup tools outside of Helm.
+
+## Conclusion
+
+Helm's lifecycle management features — including installation, upgrades, rollbacks, and history tracking — provide powerful tools for managing Kubernetes deployments over time. By keeping track of revisions and allowing for easy rollbacks, Helm helps ensure that the state of applications can be managed efficiently and with confidence. For applications with persistent data, consider implementing external backup strategies to complement Helm’s lifecycle management features.
+

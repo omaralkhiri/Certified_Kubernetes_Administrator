@@ -1,0 +1,97 @@
+# Kubernetes DNS Implementation Documentation
+
+## Overview
+Kubernetes implements a DNS (Domain Name System) service within the cluster to enable service discovery and name resolution between pods and services. This documentation explains how Kubernetes implements DNS functionality to allow pods to communicate with each other using names rather than IP addresses.
+
+## Basic Concept
+In a Kubernetes cluster:
+- Each pod and service gets a DNS name
+- Pods can resolve other pods and services by name
+- The system handles dynamic changes as pods and services are created/destroyed
+
+## Native Solution Limitations
+A naive approach would be to:
+1. Add entries to each pod's `/etc/hosts` file
+   - Example: `10.244.2.5 web` in one pod, `10.244.1.5 test` in another
+2. Problems with this approach:
+   - Doesn't scale with thousands of pods
+   - Can't handle frequent pod creation/deletion
+   - Manual maintenance is impractical
+
+## Centralized DNS Solution
+Kubernetes implements a better solution using:
+1. A central DNS server in the cluster
+2. Pods configured to use this DNS server via `/etc/resolv.conf`
+
+### DNS Server Implementation
+- Pre-1.12: kube-dns
+- Kubernetes 1.12+: CoreDNS (recommended)
+
+## CoreDNS Implementation Details
+
+### Deployment Architecture
+- CoreDNS runs as a pod in the `kube-system` namespace
+- Typically deployed with two pods for redundancy (via ReplicaSet)
+- Runs the CoreDNS executable with a configuration file
+
+### Configuration
+- Configuration file location: `/etc/coredns/Corefile`
+- Managed via a ConfigMap object for easy modification
+- Key plugins configured:
+  - Error handling
+  - Health reporting
+  - Monitoring/metrics
+  - Caching
+  - **Kubernetes plugin** (most important for cluster DNS)
+
+### Kubernetes Plugin Configuration
+- Sets the cluster's top-level domain (default: `cluster.local`)
+- All DNS records fall under this domain
+- `pods` option: Creates records for pods (disabled by default)
+  - Converts pod IPs to dashed format (e.g., `10-244-1-5`)
+- Unresolvable queries (e.g., external domains) are forwarded to upstream nameservers
+
+## Service Discovery Mechanism
+
+### CoreDNS Service
+- CoreDNS is exposed via a Service (default name: `kube-dns`)
+- This service IP is configured as the nameserver for pods
+
+### Pod DNS Configuration
+- Configured automatically by kubelet when pods are created
+- Kubelet configuration includes:
+  - DNS server IP (CoreDNS service IP)
+  - Cluster domain
+
+### Name Resolution
+Services can be resolved using:
+1. Short name: `webservice`
+2. Namespace-qualified: `webservice.default`
+3. Service-qualified: `webservice.default.svc`
+4. Fully Qualified Domain Name (FQDN): `webservice.default.svc.cluster.local`
+
+### Search Domains
+Pods' `/etc/resolv.conf` includes search domains:
+1. `default.svc.cluster.local`
+2. `svc.cluster.local`
+3. `cluster.local`
+
+This allows resolution using shorter names that get expanded with search domains.
+
+## Pod vs Service Resolution Differences
+- Services: Can be resolved with short names due to search domains
+- Pods: Require full FQDN for resolution (unless pods plugin is enabled)
+
+## Key Components Involved
+1. **CoreDNS**: The DNS server implementation
+2. **kubelet**: Configures pods' `/etc/resolv.conf` with correct nameserver
+3. **Kubernetes API**: CoreDNS watches for new services/pods to create records
+
+## Conclusion
+Kubernetes provides a robust DNS solution that:
+- Automatically handles service discovery
+- Scales with the cluster
+- Requires minimal manual configuration
+- Supports both internal and external name resolution
+
+This implementation allows applications to easily discover and communicate with other services in the cluster using DNS names rather than hard-coded IP addresses.

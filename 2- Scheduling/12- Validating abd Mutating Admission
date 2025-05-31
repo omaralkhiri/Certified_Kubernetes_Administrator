@@ -1,0 +1,80 @@
+# Kubernetes Admission Controllers and Webhooks
+
+## Introduction
+Kubernetes admission controllers are components that intercept API requests before they are persisted in etcd. They help enforce policies, validate configurations, and mutate resource definitions. There are two primary types of admission controllers:
+
+1. **Validating Admission Controllers** – Validate requests and either allow or deny them.
+2. **Mutating Admission Controllers** – Modify resource definitions before they are stored.
+
+Some admission controllers can perform both validation and mutation.
+
+## Built-in Admission Controllers
+
+### Namespace Lifecycle Admission Controller
+This is a **validating admission controller** that ensures a namespace exists before allowing resource creation within it. If the namespace does not exist, the request is rejected.
+
+### Default Storage Class Admission Controller
+This is a **mutating admission controller** that automatically assigns a default storage class to a PersistentVolumeClaim (PVC) if none is specified. This ensures that PVCs have a storage class without requiring users to define one explicitly.
+
+## Execution Order of Admission Controllers
+Mutating admission controllers are invoked before validating admission controllers. This ensures that any changes made by the mutating controller are taken into account before validation occurs. For example:
+
+1. **Namespace Auto Provisioning Admission Controller** (mutating) – Automatically creates a namespace if it does not exist.
+2. **Namespace Lifecycle Admission Controller** (validating) – Validates whether the namespace exists.
+
+If the validation controller ran first, it would reject the request before the mutating controller had a chance to create the namespace.
+
+## External Admission Webhooks
+Kubernetes allows custom admission logic via external admission controllers using:
+
+- **MutatingAdmissionWebhook** – Alters requests before they are stored.
+- **ValidatingAdmissionWebhook** – Validates requests and enforces policies.
+
+### Workflow of an External Admission Webhook
+1. API requests pass through built-in admission controllers.
+2. If an admission webhook is configured, the request is forwarded to the webhook server.
+3. The webhook server receives an **AdmissionReview** object in JSON format.
+4. The webhook server processes the request and returns an **AdmissionReview** response, specifying whether the request is allowed or denied.
+
+## Deploying an Admission Webhook Server
+1. **Develop the Webhook Server**
+   - The webhook server can be implemented in any language (Go, Python, etc.).
+   - It must accept and respond with JSON objects following the Kubernetes AdmissionReview format.
+   - Example functionalities:
+     - **Validation Webhook:** Reject requests where the user’s name matches the resource name.
+     - **Mutating Webhook:** Automatically add labels to objects.
+
+2. **Host the Webhook Server**
+   - The server can be hosted externally or deployed as a **Kubernetes Deployment**.
+   - If deployed in Kubernetes, it must be exposed using a **Kubernetes Service**.
+
+3. **Configure Kubernetes to Use the Webhook**
+   - Create a **ValidatingWebhookConfiguration** or **MutatingWebhookConfiguration** object.
+   - Example YAML structure:
+     ```yaml
+     apiVersion: admissionregistration.k8s.io/v1
+     kind: ValidatingWebhookConfiguration
+     metadata:
+       name: pod-policy.example.com
+     webhooks:
+       - name: pod-policy.example.com
+         clientConfig:
+           service:
+             name: webhook-service
+             namespace: default
+             path: /validate
+           caBundle: <Base64-encoded-CA-certificate>
+         rules:
+           - apiGroups: [""]
+             apiVersions: ["v1"]
+             operations: ["CREATE"]
+             resources: ["pods"]
+     ```
+   - If the webhook server is external, a direct URL can be provided instead of a service.
+
+4. **Security Considerations**
+   - The webhook server must use TLS for secure communication.
+   - Kubernetes API Server must be configured with the **CA bundle** to validate the webhook’s certificate.
+
+## Conclusion
+Kubernetes admission controllers provide powerful mechanisms for enforcing policies and automating resource modifications. Custom webhooks enable users to define their own validation and mutation logic, integrating seamlessly with Kubernetes API requests. Understanding and configuring admission controllers correctly ensures better security, compliance, and automation in Kubernetes clusters.

@@ -1,0 +1,102 @@
+# Vertical Pod Autoscaler (VPA) in Kubernetes
+
+## Manual Vertical Scaling of a Pod
+As a Kubernetes administrator, you may need to manually scale a workload vertically to ensure sufficient resources are available for an application. Suppose a pod is configured with:
+- **CPU Request:** 250 milliCores
+- **CPU Limit:** 500 milliCores (max capacity)
+
+To monitor resource consumption, use the following command:
+```sh
+kubectl top pod
+```
+Ensure that the metrics server is running on the cluster to collect resource usage.
+
+When a pod reaches a specific threshold, manually scaling it requires editing the deployment:
+```sh
+kubectl edit deployment <deployment-name>
+```
+Modify the resource requests and limits under the `containers` section of the pod template. After saving the changes, Kubernetes will terminate the existing pod and create a new one with the updated resource settings.
+
+## Introduction to Vertical Pod Autoscaler (VPA)
+Manually scaling pods is inefficient. The **Vertical Pod Autoscaler (VPA)** automates this process, similar to the **Horizontal Pod Autoscaler (HPA)**. VPA continuously monitors resource metrics and dynamically adjusts CPU and memory requests to balance the workload.
+
+Unlike HPA, VPA is **not built-in** and must be deployed manually.
+
+### Deploying VPA
+To deploy VPA, apply the VPA definition file available in the official GitHub repository:
+```sh
+kubectl apply -f https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/deploy/vpa.yaml
+```
+After deployment, verify the components in the `kube-system` namespace:
+```sh
+kubectl get pods -n kube-system | grep vpa
+```
+You should see three main components running:
+1. **VPA Recommender**: Monitors resource usage and provides optimal CPU and memory recommendations.
+2. **VPA Updater**: Detects under- or over-provisioned pods and evicts them when updates are needed.
+3. **VPA Admission Controller**: Intercepts pod creation to apply recommended resource requests and limits.
+
+### How VPA Works
+- **Recommender** collects resource usage data from the Kubernetes Metrics API.
+- **Updater** detects suboptimal resource allocation and evicts pods when necessary.
+- **Admission Controller** modifies newly created pods to start with optimal resource settings.
+
+## Configuring VPA
+There is no imperative command to create a VPA resource. Instead, define it using a YAML file:
+```yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: my-app-vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-app
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "*"
+      minAllowed:
+        cpu: "250m"
+        memory: "256Mi"
+      maxAllowed:
+        cpu: "2"
+        memory: "2Gi"
+```
+
+### VPA Update Modes
+VPA supports four update modes:
+1. **Off**: Only provides recommendations; no updates are applied.
+2. **Initial**: Updates pod resources only during creation.
+3. **Recreate**: Evicts pods that require resource updates and restarts them with new values.
+4. **Auto**: Same as `Recreate` for now, but in future Kubernetes versions, it will support in-place updates.
+
+To check VPA recommendations, run:
+```sh
+kubectl describe vpa my-app-vpa
+```
+
+## Comparing VPA and HPA
+| Feature               | VPA                                             | HPA                                   |
+|----------------------|------------------------------------------------|--------------------------------------|
+| Scaling Method      | Adjusts CPU/memory of existing pods            | Adds/removes pods based on demand   |
+| Pod Behavior        | Restarts pods to apply changes                  | Keeps pods running, scales out/in   |
+| Handling Traffic Spikes | Less efficient (due to restarts)              | Instant pod scaling                 |
+| Cost Optimization   | Prevents over-provisioning                      | Avoids unnecessary idle pods        |
+| Best for           | Stateful apps, JVM apps, AI, databases         | Web apps, microservices, APIs       |
+
+## When to Use VPA vs. HPA
+- **Use VPA** for applications requiring fine-tuned CPU/memory allocation, such as databases and JVM-based apps.
+- **Use HPA** for applications needing rapid scalability, such as web servers and microservices.
+
+### Example Use Case
+- A Java application requires **high CPU at startup**, but lower resources afterward.
+- VPA can initially allocate more CPU and then reduce it once startup is complete.
+
+## Conclusion
+VPA is ideal for **optimizing individual pod performance**, while HPA is better for **dynamic scaling**. Choosing the right autoscaler depends on workload type and scalability needs.
+
+Now, let's move on to the hands-on lab and implement VPA!
+

@@ -1,0 +1,52 @@
+### Introduction to etcd's Role in Kubernetes
+
+Welcome to this lecture. In the previous session, we discussed the basics of **etcd**. In this lecture, we will focus on **etcd's role in Kubernetes**, explaining how **etcd** serves as the key data store for all information related to your Kubernetes cluster, including nodes, pods, configurations, secrets, accounts, roles, role bindings, and more. When you run commands like `kubectl get`, the data is pulled from the **etcd** server.
+
+Every change you make in your Kubernetes cluster—such as adding nodes, deploying pods, or managing replica sets—is reflected in **etcd**. A change is only considered complete once it is updated in the **etcd** server.
+
+### Two Types of Kubernetes Deployment
+
+Kubernetes clusters can be deployed in two primary ways:
+
+1. **Deploying from Scratch**: This involves manually installing and configuring each component, including **etcd**, on your master node.
+2. **Using kubeadm**: This tool automates much of the deployment process, including deploying **etcd** as a pod within the Kubernetes cluster.
+
+In this course, we will explore both methods. The practical test environments use the **kubeadm** tool, while later in the course, we will set up a Kubernetes cluster from scratch to better understand the deployment process and how it impacts **etcd**.
+
+### Setting Up etcd Manually
+
+If you choose to set up your Kubernetes cluster from scratch, you'll need to manually deploy **etcd** by downloading the **etcd** binaries, installing them, and configuring **etcd** as a service on your master node. Here are the key considerations when manually deploying **etcd**:
+
+- **Certificates**: Many options in the **etcd** service configuration relate to certificates, which are crucial for secure communication. We will cover how to create and configure these certificates in a later section of this course on **TLS certificates**.
+- **Cluster Configuration**: If you are setting up **etcd** as part of a Kubernetes cluster, you need to configure **etcd** to run as a cluster by using specific parameters. We will address these options in detail when we discuss setting up **etcd** for **high availability**.
+- **Advertised Client URL**: One important configuration is the **advertised client URL**. This is the address on which **etcd** listens (by default, the IP of the server on port `2379`). This URL must be configured in the **Kube API server** to ensure it can communicate with the **etcd** server.
+
+### Setting Up etcd Using kubeadm
+
+If you set up your cluster using **kubeadm**, **etcd** is deployed automatically as a pod in the `kube-system` namespace. You can explore the **etcd** database from within the pod using the **etcdctl** utility to interact with the database and list all keys stored by Kubernetes.
+
+- To list keys stored in **etcd**, use the following **etcdctl** command:
+  ```bash
+  etcdctl get
+  ```
+- Kubernetes data is stored in a specific directory structure within **etcd**. The root directory is `registry`, and under it, you'll find Kubernetes constructs such as:
+  - `minions` (or `nodes`)
+  - `pods`
+  - `replica sets`
+  - `deployments`
+
+### High Availability for etcd in Kubernetes
+
+In high-availability (HA) environments, you will have multiple master nodes in your Kubernetes cluster. In such cases, multiple **etcd** instances are spread across the master nodes to ensure redundancy and reliability. To make sure the **etcd** instances are aware of each other, you must configure them with the correct parameters in the **etcd** service configuration.
+
+- **Initial Cluster Option**: This option specifies the different **etcd** instances. Each instance needs to be aware of the others in order to form a reliable cluster.
+  
+We will go into more detail on **high availability** in a later section of this course, but it's important to highlight that for a multi-master setup, the **etcd** instances must be configured correctly to maintain synchronization.
+
+### Conclusion
+
+In this lecture, we explored **etcd's** role in Kubernetes and how it stores critical cluster data. We also discussed the two primary methods for deploying **etcd** in a Kubernetes cluster: deploying from scratch or using the **kubeadm** tool. Finally, we touched on high-availability considerations for **etcd** and how to ensure that multiple **etcd** instances work together seamlessly in a Kubernetes cluster.
+
+In future lessons, we will delve deeper into high-availability setups and the configuration of **etcd** in Kubernetes clusters. 
+
+Thank you for joining, and we look forward to seeing you in the next session!

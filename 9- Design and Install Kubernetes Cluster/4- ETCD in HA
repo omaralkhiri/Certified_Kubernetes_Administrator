@@ -1,0 +1,77 @@
+# High Availability (HA) Setup for etcd
+
+## Introduction
+This documentation outlines the configuration of etcd in a high availability (HA) setup. Understanding etcd in HA mode is crucial for configuring Kubernetes in a highly available environment, as etcd serves as the backbone of the cluster. This document provides an overview of etcd, its distributed nature, leader election, and quorum-based decision-making, ensuring a resilient and fault-tolerant setup.
+
+## What is etcd?
+Etcd is a distributed, reliable key-value store that is simple, secure, and fast. Unlike traditional databases that store data in tables, etcd stores information as documents or pages. Each document contains all relevant details, and changes to one do not affect others. Etcd supports structured formats like JSON and YAML for handling complex data.
+
+## Etcd as a Distributed System
+When running etcd on a single server, it poses a risk of data loss in case of failure. To enhance reliability, etcd can be distributed across multiple servers, ensuring data redundancy. For example, a three-node etcd cluster maintains identical copies of the database. If one node fails, the remaining two continue to operate, preserving data integrity.
+
+## Data Consistency and Leader Election
+Etcd ensures data consistency across all nodes through a leader-follower mechanism. Although etcd allows reading from any node, write operations are strictly managed by the elected leader. The leader processes writes and replicates them to follower nodes. If a write request arrives at a follower, it is forwarded to the leader for processing. A write is only considered complete when the leader successfully replicates it across a majority of the nodes.
+
+### Raft Protocol for Leader Election
+Etcd uses the Raft consensus algorithm to elect a leader and ensure data consistency. The election process involves:
+1. Nodes initiating a random timer.
+2. The first node to complete its timer sends a leader request to others.
+3. If a majority votes for the requesting node, it becomes the leader.
+4. The leader periodically notifies other nodes to maintain its status.
+5. If the leader fails or loses connectivity, a re-election occurs.
+
+## Quorum and Fault Tolerance
+The concept of quorum ensures a minimum number of nodes must be available for the cluster to function correctly. The quorum is calculated as:
+\[ Quorum = (Total Nodes / 2) + 1 \]
+For example:
+- A three-node cluster requires a quorum of 2.
+- A five-node cluster requires a quorum of 3.
+- A seven-node cluster requires a quorum of 4.
+
+Having an even number of nodes is not recommended, as it increases the risk of split-brain scenarios where the cluster partitions into equal halves, making quorum unachievable.
+
+## Recommended Cluster Size
+For high availability, an etcd cluster should have an odd number of nodes:
+- **Minimum**: 3 nodes (tolerates 1 failure)
+- **Preferred**: 5 nodes (tolerates 2 failures)
+- **Higher availability**: 7 nodes (tolerates 3 failures)
+- More than 7 nodes is generally unnecessary, as it increases overhead without significant benefits.
+
+## Installing and Configuring etcd in HA Mode
+### Steps:
+1. **Download the latest etcd binary**.
+2. **Extract and install etcd**.
+3. **Create the required directory structure**.
+4. **Copy the TLS certificates** (Refer to the TLS certificates section for generation steps).
+5. **Configure etcd**:
+   - Use the `initial-cluster` option to specify peer information.
+   - Ensure each node knows its peers and participates in the cluster.
+6. **Start etcd service**.
+
+## Managing etcd with etcdctl
+Etcd provides a command-line tool `etcdctl` for interacting with the database. By default, it operates in API v2, but for v3, set the environment variable:
+```
+export ETCDCTL_API=3
+```
+### Basic Commands:
+- **Store a key-value pair**:
+  ```
+  etcdctl put name John
+  ```
+- **Retrieve a value**:
+  ```
+  etcdctl get name
+  ```
+  Output:
+  ```
+  John
+  ```
+- **Retrieve all keys**:
+  ```
+  etcdctl get --keys-only
+  ```
+
+## Conclusion
+For a highly available etcd setup, a minimum of three nodes is required. Odd-numbered clusters are recommended to prevent split-brain scenarios. The choice of three, five, or seven nodes depends on fault tolerance requirements and infrastructure capacity. This configuration ensures a resilient Kubernetes environment, supporting reliable data storage and management.
+
+Thank you for reading. In the next section, we will cover configuring Kubernetes in HA mode with etcd.

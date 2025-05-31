@@ -1,0 +1,78 @@
+### Kubernetes DaemonSets
+
+In this lecture, we will discuss **DaemonSets** in Kubernetes. So far, we have deployed various pods across different nodes in our cluster. Using **ReplicaSets** and **Deployments**, we ensured that multiple copies of our applications were made available across various worker nodes. **DaemonSets** are similar to ReplicaSets, but they are used to deploy one copy of a pod on each node in a cluster. 
+
+### What is a DaemonSet?
+
+A **DaemonSet** ensures that one copy of a pod runs on every node in your cluster. Whenever a new node is added, the DaemonSet automatically adds a pod to the new node. Conversely, when a node is removed, the pod running on that node is also removed. DaemonSets are particularly useful when you need a pod to run on every node, regardless of the node count in the cluster.
+
+### Use Cases for DaemonSets
+
+DaemonSets are helpful in a variety of scenarios where you want to deploy a pod across all nodes in your cluster. Some common use cases include:
+
+- **Monitoring and Logging:** If you need to deploy monitoring agents or log collectors on every node, a DaemonSet ensures that a monitoring pod is always running on each node in the cluster.
+- **System Services:** Kubernetes system components like the **kube-proxy** can be deployed as a DaemonSet to ensure that every node in the cluster runs the necessary system services.
+- **Networking Solutions:** Some networking solutions, like **WeaveNet**, require agents to be deployed on every node in the cluster. A DaemonSet can manage this deployment seamlessly.
+
+### Creating a DaemonSet
+
+Creating a DaemonSet is similar to creating a ReplicaSet. It has a pod specification under the `template` section and selectors to link the DaemonSet to the pods. Below is the basic structure of a DaemonSet definition file:
+
+```yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: monitoring-daemon
+spec:
+  selector:
+    matchLabels:
+      app: monitoring
+  template:
+    metadata:
+      labels:
+        app: monitoring
+    spec:
+      containers:
+        - name: monitoring-agent
+          image: monitoring-image:latest
+          ports:
+            - containerPort: 8080
+```
+
+In the definition file:
+- The **`apiVersion`** is set to `apps/v1`, and the **`kind`** is `DaemonSet`.
+- The **metadata** section contains the name of the DaemonSet.
+- Under **spec**, you define a **selector** and a **pod template**. The pod template contains the specification for the pod that the DaemonSet will deploy across all nodes.
+
+Once your definition file is ready, you can create the DaemonSet with the following command:
+
+```bash
+kubectl create -f daemonset-definition.yaml
+```
+
+To view the created DaemonSet, use:
+
+```bash
+kubectl get daemonset
+```
+
+To view detailed information about the DaemonSet:
+
+```bash
+kubectl describe daemonset monitoring-daemon
+```
+
+### How Does a DaemonSet Work?
+
+The DaemonSet ensures that a pod runs on every node in the cluster. So how does it schedule pods on each node?
+
+Earlier, before Kubernetes version 1.12, you could directly assign a pod to a specific node by setting the `nodeName` property in the pod specification. This bypassed the scheduler and placed the pod on the desired node.
+
+However, starting from Kubernetes version 1.12, DaemonSets use the default scheduler and **node affinity rules** (which we discussed in a previous lecture) to schedule pods. The DaemonSet controller will automatically ensure that the pod is placed on every node, leveraging the default scheduler.
+
+### Summary
+
+DaemonSets are essential for deploying a pod on every node in the cluster. Whether it’s for monitoring, logging, or system services like the **kube-proxy**, DaemonSets provide a way to ensure that each node is equipped with the necessary components. With the automatic management of pod placement as nodes are added or removed, DaemonSets simplify the deployment and management of cluster-wide services.
+
+To practice working with DaemonSets, head over to the practice test section in the course.
+

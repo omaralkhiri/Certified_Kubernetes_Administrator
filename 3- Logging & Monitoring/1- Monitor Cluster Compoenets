@@ -1,0 +1,89 @@
+# Monitoring a Kubernetes Cluster
+
+## Introduction
+Monitoring a Kubernetes cluster is essential for maintaining its health and performance. This guide explores how to monitor resource consumption on Kubernetes, covering both node-level and pod-level metrics.
+
+### Key Metrics to Monitor:
+1. **Node-Level Metrics:**
+   - Number of nodes in the cluster.
+   - Health status of the nodes.
+   - Performance metrics: CPU, memory, network, and disk utilization.
+
+2. **Pod-Level Metrics:**
+   - Number of pods.
+   - Performance metrics for each pod, such as CPU and memory usage.
+
+## Monitoring Solutions
+Kubernetes does not include a full-featured built-in monitoring solution. However, several tools are available:
+
+### Open Source Solutions:
+- **Metric Server**
+- **Prometheus**
+- **Elastic Stack**
+
+### Proprietary Solutions:
+- **Datadog**
+- **Dynatrace**
+
+### Deprecated Solution:
+- **Heapster**: Previously used for monitoring Kubernetes clusters, but it is now deprecated. The Metric Server is its lightweight replacement.
+
+## Metric Server Overview
+The Metric Server is an in-memory monitoring solution that:
+- Retrieves metrics from Kubernetes nodes and pods.
+- Aggregates and stores metrics in memory (no historical data storage).
+
+### Key Limitation:
+- Metrics are not stored on disk; for historical data, use advanced solutions like Prometheus.
+
+## How Metrics Are Generated
+- **Kubelet**: A Kubernetes agent running on each node, responsible for:
+  - Receiving instructions from the Kubernetes API master server.
+  - Running pods on nodes.
+- **cAdvisor (Container Advisor)**: A Kubelet subcomponent that:
+  - Collects performance metrics from pods.
+  - Exposes these metrics through the Kubelet API for the Metric Server.
+
+## Deploying the Metric Server
+### Using Minikube:
+Run the command:
+```bash
+minikube addons enable metrics-server
+```
+
+### For Other Environments:
+1. Clone the Metric Server deployment files from its GitHub repository.
+2. Deploy the required components using:
+   ```bash
+   kubectl create -f <deployment-file.yaml>
+   ```
+   This command deploys:
+   - Pods
+   - Services
+   - Roles required for the Metric Server.
+
+3. Allow time for the Metric Server to collect and process data.
+
+## Viewing Performance Metrics
+1. **Node Metrics**:
+   Run:
+   ```bash
+   kubectl top node
+   ```
+   Example output:
+   - CPU usage: 8% of the master node, equivalent to 866 cores.
+
+2. **Pod Metrics**:
+   Run:
+   ```bash
+   kubectl top pod
+   kubectl top pod --sort-by=memory | cpu
+   ```
+
+
+## Conclusion
+The Metric Server provides basic in-memory monitoring for Kubernetes clusters. For advanced monitoring needs, consider tools like Prometheus or Datadog. Now, proceed to the coding exercises to practice viewing performance metrics.
+
+--- 
+
+This documentation is structured, error-free, and ready for use. Let me know if you'd like further refinements!

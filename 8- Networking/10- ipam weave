@@ -1,0 +1,63 @@
+# **IP Address Management in Kubernetes**  
+
+## **Introduction**  
+In Kubernetes, IP address management (IPAM) is crucial for assigning unique IP addresses to Pods and ensuring proper network communication. This documentation focuses on how IP addresses are assigned to Pods within a Kubernetes cluster, particularly through the **Container Network Interface (CNI)** and its plugins.  
+
+## **IP Address Management (IPAM) in Kubernetes**  
+
+### **1. Responsibility of IP Assignment**  
+- Kubernetes itself does not manage IP assignments for Pods.  
+- The responsibility lies with the **CNI plugin** (the network solution provider) to assign IPs to containers.  
+- The CNI plugin must ensure:  
+  - No duplicate IPs are assigned.  
+  - IPs are allocated efficiently across nodes.  
+
+### **2. How IPs Are Managed**  
+A simple approach is to store assigned IPs in a file on each node and manage them via scripts. However, manually handling this can be error-prone.  
+
+To simplify IP management, **CNI provides built-in IPAM plugins**, such as:  
+- **host-local**: Manages IP allocation locally on each node using a predefined range.  
+- **dhcp**: Uses a DHCP server for dynamic IP assignment.  
+
+### **3. IPAM Configuration in CNI**  
+The CNI configuration file includes an **IPAM section**, where administrators can define:  
+- The **IPAM plugin type** (e.g., `host-local`).  
+- The **subnet** range for Pod IPs.  
+- **Routes** for network traffic.  
+
+Example CNI configuration with `host-local` IPAM:  
+```json
+{
+  "cniVersion": "0.4.0",
+  "name": "mynet",
+  "type": "bridge",
+  "ipam": {
+    "type": "host-local",
+    "subnet": "10.32.0.0/12",
+    "routes": [
+      { "dst": "0.0.0.0/0" }
+    ]
+  }
+}
+```
+
+### **4. How Weave Implements IPAM**  
+Weave Net is a popular CNI plugin that handles IPAM as follows:  
+- **Default IP Range**: `10.32.0.0/12` (provides ~1 million IPs from `10.32.0.1` to `10.47.255.254`).  
+- **IP Allocation Strategy**:  
+  - The IP range is **split equally among all nodes** in the cluster.  
+  - Each node gets a portion of the subnet, and Pods on that node receive IPs from this range.  
+- **Customization**: The IP range can be modified during Weave deployment.  
+
+### **5. Key Considerations**  
+- **No Central IPAM by Default**: Kubernetes does not enforce a central IPAM system; it depends on the CNI plugin.  
+- **Avoiding IP Conflicts**: The CNI plugin must ensure IP uniqueness across the cluster.  
+- **Scalability**: Large clusters may require efficient IP allocation strategies to prevent exhaustion.  
+
+## **Conclusion**  
+IP address management in Kubernetes is delegated to **CNI plugins**, which handle Pod IP assignment, subnet allocation, and conflict prevention. Plugins like **host-local** and **Weave Net** provide different approaches, allowing flexibility based on cluster requirements.  
+
+For production environments, choosing the right **CNI plugin with a robust IPAM strategy** is essential to ensure stable networking and scalability.  
+
+---  
+This documentation provides a structured overview of IPAM in Kubernetes, explaining key concepts, responsibilities, and implementation details. Let me know if you'd like any modifications or additional sections!

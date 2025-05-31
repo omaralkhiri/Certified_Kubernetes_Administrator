@@ -1,0 +1,42 @@
+### Documentation: Kube Proxy in Kubernetes
+
+#### Overview
+**Kube proxy** is an essential component in the Kubernetes networking model that enables communication between services and pods across nodes in a cluster. It ensures that network traffic reaches the correct pod, even if the pod's IP changes over time, by implementing rules that route traffic to the appropriate backend pods.
+
+#### Role of Kube Proxy
+
+**Kube proxy** works by ensuring that services in the Kubernetes cluster are accessible across all nodes. It creates the necessary network rules on each node to forward traffic intended for a service to the correct pod. It does so by using **iptables** or **IPVS** (depending on the configuration) to manage and forward requests between services and pods.
+
+1. **Traffic Forwarding**: When a service is created, **kube proxy** sets up the appropriate rules on each node to forward traffic intended for the service IP to the actual pod running the service.
+2. **Load Balancing**: **Kube proxy** can balance the load across the pods behind a service, ensuring efficient distribution of traffic.
+
+#### How Kube Proxy Works
+
+Kubernetes services are abstracted components with virtual IPs (VIPs) that are accessible within the cluster. When a service is created, it is assigned an IP, but it doesn't directly join the Pod Network, as services are not containers. Instead, **kube proxy** creates rules that allow traffic sent to the service IP to be forwarded to the corresponding backend pod. 
+
+The process works as follows:
+
+1. **Kube Proxy Setup**: When a new service is created, **kube proxy** listens for changes in services and automatically configures the appropriate forwarding rules.
+2. **Using iptables**: **Kube proxy** uses **iptables** rules on each node to route traffic from the service IP to the correct pod IP. For example, traffic destined for the service IP (e.g., `10.96.0.12`) will be forwarded to the pod IP (e.g., `10.32.0.15`).
+   
+   - This ensures that the application can communicate with backend pods without being affected by changes in pod IP addresses.
+
+3. **DaemonSet Deployment**: **Kube proxy** is deployed as a **daemonset** on each node in the cluster, meaning that a single **kube proxy** pod runs on every node to ensure traffic forwarding is handled locally.
+
+#### Installation
+
+1. **Manual Installation**:
+   - Download the **kube proxy** binary from the [Kubernetes release page](https://kubernetes.io/releases/).
+   - Extract the binary and run it as a service.
+
+2. **Kubeadm Setup**:
+   - If you use **kubeadm** to set up your cluster, it automatically deploys **kube proxy** as a pod on each node via a **daemonset**.
+
+#### Additional Networking Features
+
+- **Service Discovery**: **Kube proxy** helps facilitate service discovery by ensuring that each pod can reach a service via its DNS name or service IP.
+- **Load Balancing**: With multiple pods backing a service, **kube proxy** distributes traffic evenly across the available pods to ensure high availability and performance
+
+#### Conclusion
+
+**Kube proxy** plays a vital role in maintaining the network connectivity between pods and services within a Kubernetes cluster. It ensures that traffic destined for a service is properly forwarded to the correct pod, even as pods are dynamically created, destroyed, or moved. By managing iptables or IPVS rules, **kube proxy** ensures seamless communication across the cluster.

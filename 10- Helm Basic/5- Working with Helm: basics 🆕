@@ -1,0 +1,126 @@
+# Helm Command Line Interface (CLI) Documentation
+
+## Introduction
+
+Helm is a powerful command-line tool used to manage Kubernetes applications. It works by packaging applications into "charts" that simplify the deployment, management, and configuration of applications on Kubernetes clusters. In this documentation, we will explore how to use Helm to deploy, manage, and remove applications, with an emphasis on a practical example of deploying a WordPress website.
+
+## Using Helm CLI
+
+### Accessing Help
+
+To get help with Helm, you can simply run the following command:
+
+```bash
+helm
+```
+
+This command provides useful information about all available commands. It serves as a quick reference to remember the correct command when you’re unsure about what to do next. For example, if you're looking to restore a release after a failed upgrade, you might want to run a command like `helm restore`. The help command will guide you to the correct syntax, which in this case is `helm rollback`.
+
+Helm also provides help for subcommands. For instance, to see what repository-related actions are available, you can run:
+
+```bash
+helm repo help
+```
+
+This will show you how to add, list, or remove chart repositories, along with any available options for each action. You can dive even deeper into specific subcommands to learn more about their parameters and usage.
+
+### Example Scenario: Deploying WordPress with Helm
+
+Let's walk through an example where we need to launch a WordPress website on a Kubernetes cluster using Helm.
+
+1. **Finding the Chart**
+
+   Charts are stored in online repositories like [Artifact Hub](https://artifacthub.io). You can search for a chart manually on the website to ensure you’re selecting a high-quality, official, or verified publisher’s chart. This site also provides detailed information about the chart, including installation commands, software components, and configurable settings.
+
+   Alternatively, you can search for charts directly from the command line. To search for WordPress charts, use the `helm search` command, specifying where to search:
+
+   ```bash
+   helm search hub wordpress
+   ```
+
+   - `hub` refers to Artifact Hub.
+   - `repo` would search within a specific chart repository.
+
+   The search results will list WordPress charts along with their versions and other details.
+
+2. **Adding the Repository and Installing WordPress**
+
+   Once you’ve identified the appropriate chart, follow the installation instructions provided. For example, if you're using the Bitnami WordPress chart, you'll first need to add the Bitnami repository to your Helm configuration:
+
+   ```bash
+   helm repo add bitnami https://charts.bitnami.com/bitnami
+   ```
+
+   After adding the repository, you can install the WordPress application using the following command:
+
+   ```bash
+   helm install my-release bitnami/wordpress
+   ```
+
+   This will deploy the WordPress application to your Kubernetes cluster.
+
+3. **Managing Releases**
+
+   After deploying the application, it is tracked as a release. To list all existing releases, use the following command:
+
+   ```bash
+   helm list
+   ```
+
+   This command helps you track installed applications and see which ones might need updates.
+
+4. **Removing a Release**
+
+   If you wish to remove a deployed application, Helm makes it easy to do so. Running the following command will remove all Kubernetes objects associated with the WordPress website:
+
+   ```bash
+   helm uninstall my-release
+   ```
+
+   This command ensures that all traces of the WordPress application are removed from your Kubernetes cluster.
+
+## Managing Helm Repositories
+
+Helm repositories store charts, and you can manage these repositories using the `helm repo` commands. Some useful commands include:
+
+1. **Adding a Repository**
+
+   To add a new Helm repository:
+
+   ```bash
+   helm repo add [REPO_NAME] [REPO_URL]
+   ```
+
+2. **Listing Repositories**
+
+   To list the repositories you’ve added:
+
+   ```bash
+   helm repo list
+   ```
+
+3. **Updating Repositories**
+
+   Over time, repository maintainers may update their charts, and the information in your local Helm installation might become outdated. To update your local copy of a repository, use the following command:
+
+   ```bash
+   helm repo update
+   ```
+
+   This command refreshes the repository data, ensuring that you have the latest information available.
+
+4. **Removing a Repository**
+
+   To remove a repository from your local Helm setup:
+
+   ```bash
+   helm repo remove [REPO_NAME]
+   ```
+
+## Conclusion
+
+Helm simplifies Kubernetes application management by allowing users to deploy, update, and remove applications with just a few commands. It acts as a package manager for Kubernetes, making application deployment easier and more efficient.
+
+By using Helm commands such as `helm install`, `helm list`, `helm rollback`, and `helm uninstall`, you can manage your applications with ease. Additionally, managing chart repositories with `helm repo add`, `helm repo update`, and `helm repo remove` ensures that you have the latest charts available for deployment.
+
+Helm truly simplifies the complexities of Kubernetes application management and provides powerful tools for every stage of the application lifecycle.

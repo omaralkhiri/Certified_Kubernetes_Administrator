@@ -1,0 +1,133 @@
+# Customizing Docker Images in Kubernetes with `kubectl` and `kustomize`
+
+This documentation provides a step-by-step guide on how to customize Docker images used in Kubernetes deployments using `kustomize`. We will specifically focus on modifying the image name and the image tag for containers in a Kubernetes deployment.
+
+### Prerequisites
+Before proceeding, ensure you have:
+- A Kubernetes cluster set up and accessible.
+- `kubectl` and `kustomize` installed.
+
+### Objective
+We will demonstrate how to:
+1. Change the image of a container in a Kubernetes deployment.
+2. Modify only the image tag without changing the image itself.
+3. Combine both image name and tag changes.
+
+### Step 1: Create the `deployment.yaml`
+
+Start by defining a Kubernetes Deployment file (`deployment.yaml`) that references the `nginx` image. Below is a sample configuration for the deployment:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: web
+          image: nginx
+          ports:
+            - containerPort: 80
+```
+
+In this example, we are deploying an Nginx server with the `nginx` image.
+
+### Step 2: Create the `kustomization.yaml`
+
+Next, we create the `kustomization.yaml` file. This is the configuration that `kustomize` will use to customize the resources in the `deployment.yaml` file.
+
+#### 1. Changing the Image Name
+
+To modify the image name (for example, from `nginx` to `haproxy`), add the following configuration to `kustomization.yaml`:
+
+```yaml
+images:
+  - name: nginx
+    newName: haproxy
+```
+
+This configuration instructs `kustomize` to search for any container using the `nginx` image and replace it with the `haproxy` image.
+
+#### 2. Changing the Image Tag
+
+If you only want to modify the image tag (for example, changing the `nginx` image from its default tag to `nginx:2.4`), you can use the `newTag` property:
+
+```yaml
+images:
+  - name: nginx
+    newTag: "2.4"
+```
+
+This will update the tag of the `nginx` image to `nginx:2.4` while keeping the image name unchanged.
+
+#### 3. Combining Image Name and Tag Changes
+
+You can also combine the changes to both the image name and the tag in one configuration. For example, to replace the `nginx` image with `haproxy` and tag it with `2.4`, your `kustomization.yaml` will look like this:
+
+```yaml
+images:
+  - name: nginx
+    newName: haproxy
+    newTag: "2.4"
+```
+
+This configuration will replace the `nginx` image with `haproxy:2.4`.
+
+### Step 3: Apply the Customization
+
+Once you've created the `kustomization.yaml` file, you can apply the changes using the `kubectl` command with `kustomize`:
+
+```bash
+kubectl apply -k .
+```
+
+This command will search for the Kubernetes resources in the current directory, apply the transformations defined in `kustomization.yaml`, and update the images accordingly.
+
+### Step 4: Verify the Changes
+
+After applying the changes, verify the result by checking the deployed resources:
+
+```bash
+kubectl get deployment nginx-deployment -o yaml
+```
+
+This will output the current state of your deployment. If you've replaced the `nginx` image with `haproxy` and tagged it with `2.4`, you should see something like this:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: web
+          image: haproxy:2.4
+          ports:
+            - containerPort: 80
+```
+
+### Key Considerations
+- **Image Name vs. Container Name**: In the `kustomization.yaml` file, the `name` property under the `images` field refers specifically to the Docker image name (not the container name). The container name, as defined in the `deployment.yaml`, does not affect the image transformation process.
+- **Transforming Multiple Images**: If you have multiple containers or images to modify, you can add additional entries under the `images` field in `kustomization.yaml` to modify each image as needed.
+
+### Conclusion
+
+By using `kustomize` with the `images` transformer, you can easily modify Docker image names and tags in your Kubernetes deployments without directly editing the deployment files. This approach provides a flexible and scalable way to manage and customize images across different environments and configurations.

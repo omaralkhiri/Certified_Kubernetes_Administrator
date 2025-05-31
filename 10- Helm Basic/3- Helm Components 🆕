@@ -1,0 +1,91 @@
+# Helm Components Documentation
+
+This document provides an overview of the key components of Helm, a package manager for Kubernetes. Helm simplifies the process of managing Kubernetes applications, and understanding its components is essential for efficiently deploying and managing applications within a Kubernetes cluster.
+
+## Helm Overview
+
+Helm is used to install, upgrade, and manage applications in Kubernetes clusters. It uses **charts**, which are collections of files containing instructions on how to deploy and manage Kubernetes resources. These charts provide a template for the Kubernetes objects, and Helm uses them to create and manage resources in the cluster. The commands for interacting with Helm are run through the **Helm Command-Line Interface (CLI)** on your local system.
+
+### Key Components of Helm
+
+#### 1. **Helm CLI (Command-Line Interface)**
+   - The Helm CLI is the tool used on your local system to execute Helm commands such as `helm install`, `helm upgrade`, `helm rollback`, and more. Through the CLI, you can interact with your Kubernetes cluster and manage Helm charts.
+
+#### 2. **Charts**
+   - **Charts** are collections of files that contain all the necessary instructions for deploying a set of Kubernetes resources. Helm uses these charts to create a collection of Kubernetes objects in your cluster. Charts allow Helm to install applications into your cluster based on predefined templates. When you apply a chart, Helm will create Kubernetes resources like Deployments, Services, ConfigMaps, etc.
+   - Charts are reusable and can be shared via Helm repositories.
+
+#### 3. **Releases**
+   - A **release** is a specific instance of an application deployed via Helm. When you install a chart, it creates a release in your Kubernetes cluster.
+   - Releases are tracked by Helm, allowing you to upgrade, roll back, or uninstall specific versions of your application.
+   - Every time you modify the deployment (e.g., upgrading the image version, changing replicas, or modifying configurations), a new **revision** of the release is created. Revisions are snapshots of the application's state and can be rolled back to a previous state if necessary.
+
+#### 4. **Repositories**
+   - Helm charts are stored in **repositories**. These repositories can be public or private and contain collections of charts for various applications. Helm provides an easy way to download charts from public repositories and deploy them into your cluster.
+   - Popular Helm repositories include:
+     - **Bitnami**: A well-known repository containing charts for popular applications.
+     - **Artifact Hub**: A central hub for discovering Helm charts across various repositories.
+     - **TrueCharts**: A community-driven repository.
+     - **Community Operators**: A collection of Helm charts contributed by the community.
+
+   You can search for charts in Helm repositories or browse through available charts via Artifact Hub (https://artifacthub.io).
+
+#### 5. **Values Files (values.yaml)**
+   - The **values.yaml** file contains configurable values for a Helm chart. These values are used to customize the deployment of the application based on your needs (e.g., setting image names, replica counts, and configurations).
+   - Most of the time, you will interact with this file to modify the deployment settings for the Helm chart. You don’t need to modify the chart itself but can adjust the `values.yaml` file to fit your requirements.
+   - Templating is used in charts to reference these values, allowing dynamic configuration during installation.
+
+#### 6. **Metadata and Kubernetes Secrets**
+   - Helm needs to track the status of releases, including revisions, charts used, and deployment metadata. This metadata is stored as **Kubernetes secrets** within the cluster, ensuring that the data survives across different users and sessions.
+   - By storing metadata as Kubernetes secrets, Helm ensures that the data persists even if different team members are working with the cluster. This enables collaboration on Helm-based deployments without losing track of changes.
+
+---
+
+## Practical Examples
+
+### Simple Application: Hello World
+Let’s consider a simple **Hello World** application. This application consists of a basic **nginx-based web server** and a **service** to expose it. The Helm chart for this application would define:
+   - A **Deployment** object to deploy a pod running the nginx image.
+   - A **Service** object to expose the nginx pod using a NodePort.
+
+Here, the `values.yaml` file would contain configurable values such as the image name and the number of replicas.
+
+### More Complex Application: WordPress
+For a more complex application, such as **WordPress**, the Helm chart would include several components:
+   - A **Deployment** for WordPress pods.
+   - A **Service** for WordPress access.
+   - Configuration values for database settings, image versions, replica count, and more.
+
+In this case, the chart would have a much more complex templating system to handle different configurations and dependencies.
+
+### Using Multiple Releases
+Helm allows you to install multiple releases of the same chart. For example, you can install two WordPress sites using two different release names:
+   - `helm install my-site bitnami/wordpress`
+   - `helm install my-second-site bitnami/wordpress`
+
+Each release is treated as an independent entity, and you can upgrade, roll back, or configure them separately. This is useful for scenarios such as:
+   - A public-facing WordPress site for customers.
+   - A development or internal testing WordPress site for your team.
+
+### Installing Charts from Repositories
+Helm makes it easy to install charts from repositories. For example, to install Redis or Prometheus from a Helm repository, you can use commands like:
+   - `helm install redis bitnami/redis`
+   - `helm install prometheus prometheus-community/kube-prometheus-stack`
+
+There are thousands of charts available across various Helm repositories, and you can search for the one that fits your needs.
+
+---
+
+## Conclusion
+
+Helm simplifies Kubernetes application management by providing a consistent and easy-to-use method for deploying and upgrading applications. The key components of Helm include:
+
+- The **Helm CLI** for managing Helm actions.
+- **Charts** that contain templates for Kubernetes resources.
+- **Releases** that represent an installation of a chart.
+- **Repositories** that store charts, making them accessible for installation.
+- The **values.yaml** file, where configuration for charts can be customized.
+- **Kubernetes secrets** used to store metadata about releases.
+
+By understanding and working with these components, you can efficiently deploy and manage applications in Kubernetes using Helm.
+

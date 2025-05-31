@@ -1,0 +1,109 @@
+# Kubernetes Service Networking Documentation
+
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Service Types](#service-types)
+   - [ClusterIP](#clusterip)
+   - [NodePort](#nodeport)
+3. [Service Networking Architecture](#service-networking-architecture)
+   - [Kube-Proxy](#kube-proxy)
+   - [IP Assignment](#ip-assignment)
+4. [Implementation Details](#implementation-details)
+   - [IP Tables Rules](#ip-tables-rules)
+   - [Network Ranges](#network-ranges)
+5. [Troubleshooting](#troubleshooting)
+6. [Conclusion](#conclusion)
+
+## Introduction <a name="introduction"></a>
+Kubernetes service networking enables communication between pods and external access to applications. While pod networking handles direct pod-to-pod communication within nodes, service networking provides a higher-level abstraction for reliable service discovery and load balancing.
+
+Services in Kubernetes are virtual constructs that provide stable IP addresses and DNS names for pods, which are ephemeral by nature. This documentation explains how service networking works in Kubernetes, focusing on the underlying mechanisms that make services accessible across the cluster.
+
+## Service Types <a name="service-types"></a>
+
+### ClusterIP <a name="clusterip"></a>
+- **Purpose**: Makes a pod accessible only within the cluster
+- **Characteristics**:
+  - Gets assigned a virtual IP address from a predefined range
+  - Accessible from all pods in the cluster, regardless of node
+  - No external access
+  - Ideal for internal services like databases
+
+### NodePort <a name="nodeport"></a>
+- **Purpose**: Makes a pod accessible both internally and externally
+- **Characteristics**:
+  - Inherits all ClusterIP functionality
+  - Additionally exposes the service on a static port on each node's IP
+  - External users can access the service through `<NodeIP>:<NodePort>`
+  - Port range is typically 30000-32767 by default
+  - Ideal for web applications needing external access
+
+## Service Networking Architecture <a name="service-networking-architecture"></a>
+
+### Kube-Proxy <a name="kube-proxy"></a>
+Kube-proxy is the core component responsible for implementing service networking:
+
+- Runs on every node in the cluster
+- Watches the Kubernetes API server for service and endpoint changes
+- Maintains network rules to enable communication to services
+- Supports different proxy modes:
+  1. **Userspace mode** (legacy)
+  2. **iptables mode** (default)
+  3. **IPVS mode** (for large-scale clusters)
+
+### IP Assignment <a name="ip-assignment"></a>
+- Services receive IP addresses from a dedicated range specified in the API server's `--service-cluster-ip-range` flag
+- This range must not overlap with the pod network CIDR
+- Service IPs are virtual and don't correspond to any actual network interface
+- The kube-proxy component programs rules to forward traffic to these virtual IPs to actual pod IPs
+
+## Implementation Details <a name="implementation-details"></a>
+
+### IP Tables Rules <a name="ip-tables-rules"></a>
+When using iptables mode (the default), kube-proxy creates the following types of rules:
+
+1. **ClusterIP Service Rules**:
+   - DNAT rules that rewrite destination IP:port from service to pod
+   - Example: `10.103.132.104:3306 → 10.244.1.2:3306`
+
+2. **NodePort Service Rules**:
+   - Additional rules that map node's IP and NodePort to service IP
+   - Example: `<NodeIP>:30036 → 10.103.132.104:3306 → 10.244.1.2:3306`
+
+Rules are tagged with comments containing the service name for identification.
+
+### Network Ranges <a name="network-ranges"></a>
+Two critical network ranges must be properly configured:
+
+1. **Pod Network CIDR**:
+   - Example: `10.244.0.0/16`
+   - Provides IP addresses for pods (e.g., `10.244.1.2`)
+
+2. **Service Cluster IP Range**:
+   - Example: `10.96.0.0/12`
+   - Provides IP addresses for services (e.g., `10.103.132.104`)
+   - Default: `10.0.0.0/24` (may vary by installation)
+
+**Critical Requirement**: These ranges must not overlap.
+
+## Troubleshooting <a name="troubleshooting"></a>
+
+1. **Viewing iptables Rules**:
+   ```bash
+   iptables -t nat -L -n -v | grep <service-name>
+   ```
+
+2. **Checking Kube-Proxy Logs**:
+   - Location varies by installation (typically `/var/log/kube-proxy.log`)
+   - Ensure appropriate verbosity level is set to see service addition messages
+
+3. **Common Issues**:
+   - Overlapping IP ranges for pods and services
+   - Kube-proxy not running or misconfigured
+   - Incorrect proxy mode selected
+   - Firewall blocking NodePort traffic
+
+## Conclusion <a name="conclusion"></a>
+Kubernetes service networking provides a powerful abstraction layer over pod networking, offering stable access to applications regardless of pod lifecycle changes. The kube-proxy component, particularly in iptables mode, efficiently implements this abstraction by maintaining dynamic forwarding rules across all cluster nodes.
+
+Proper configuration of network ranges and understanding of the different service types are crucial for building reliable Kubernetes applications. The virtual nature of services enables flexible communication patterns while maintaining simplicity for application developers.

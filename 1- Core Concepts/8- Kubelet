@@ -1,0 +1,35 @@
+### Documentation: Kubelet in Kubernetes
+
+#### Overview
+The **kubelet** is a critical component in the Kubernetes architecture, running on each worker node in the cluster. It is responsible for ensuring that containers (pods) are running in a healthy state, as instructed by the Kubernetes master (through the **scheduler** and **kube API server**). The **kubelet** monitors the containers' status, reports their health to the master, and interacts with the container runtime (such as Docker) to pull container images and start containers.
+
+#### Role of the Kubelet
+The **kubelet** serves several key roles:
+
+- **Registration**: The **kubelet** registers the worker node with the Kubernetes cluster and ensures it is available for scheduling.
+- **Container Management**: The **kubelet** communicates with the container runtime engine (like Docker) to pull container images and launch containers (pods).
+- **Pod and Container Monitoring**: It continuously monitors the state of the pods and containers running on the worker node, ensuring that they are healthy and running as expected.
+- **Reporting**: The **kubelet** regularly reports the status of the node, pods, and containers back to the **kube API server**.
+
+In this analogy, the **kubelet** functions as the "captain" of a ship, overseeing the activities on the worker node (the ship) and reporting back to the master (the cluster management system).
+
+#### Installing and Configuring the Kubelet
+
+1. **Installation**: 
+   - If you use **kubeadm** to set up your Kubernetes cluster, the **kubelet** is not automatically deployed. Unlike other components, you must manually install the **kubelet** on each worker node.
+   - Download the **kubelet** binary from the Kubernetes release page, extract it, and run it as a service on your worker nodes.
+
+2. **Viewing the Running Kubelet Process**:
+   - You can check the **kubelet** process and its running options by listing the processes on the worker node and searching for **kubelet**.
+
+#### Kubelet Responsibilities
+
+- **Pod Lifecycle Management**: The **kubelet** ensures that the correct pods are running on its node. It watches for changes in the desired pod state, pulls container images if necessary, and launches the containers.
+- **Health Checking**: It monitors the health of the containers and restarts them if necessary. If a pod or container is unhealthy or fails, the **kubelet** will ensure that the desired state is restored.
+- **Reporting to the Master**: The **kubelet** sends periodic updates to the **kube API server** about the status of the node and the pods running on it. This allows the master to be aware of the node’s health and resource utilization.
+
+#### TLS Bootstrapping for Kubelet
+In Kubernetes, the **kubelet** communicates securely with the **kube API server**. The process of securely generating and managing certificates for this communication is known as **TLS bootstrapping**. This allows the **kubelet** to authenticate itself with the API server in a secure manner.
+
+#### Conclusion
+The **kubelet** is essential for the functioning of worker nodes in a Kubernetes cluster. It manages the containers, ensures they are running according to the desired state, and reports the status to the master. The installation and configuration of the **kubelet** are crucial for making sure that your worker nodes properly join and function in the cluster. Later in this course, we will explore how to configure and manage **kubelets** in more detail, including their certificate management and TLS bootstrapping.

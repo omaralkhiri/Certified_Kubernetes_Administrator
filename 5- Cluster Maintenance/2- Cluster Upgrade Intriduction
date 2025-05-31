@@ -1,0 +1,98 @@
+## Kubernetes Cluster Upgrade Process
+
+### Overview
+This document explains the process of upgrading a Kubernetes cluster, focusing on the core control plane components. External dependencies like etcd and CoreDNS are not covered here.
+
+### Version Compatibility
+- **Control Plane Components**:
+  - `kube-apiserver`: The primary component that other components interact with.
+  - `kube-controller-manager` and `kube-scheduler`: Can be at most one minor version lower than `kube-apiserver`.
+  - `kubelet` and `kube-proxy`: Can be at most two minor versions lower than `kube-apiserver`.
+
+For example, if `kube-apiserver` is at version 1.10:
+  - `kube-controller-manager` and `kube-scheduler` can be at 1.9 or 1.10.
+  - `kubelet` and `kube-proxy` can be at 1.8 or 1.9.
+
+- **kubectl**:
+  - Can be one version higher, the same version, or one version lower than `kube-apiserver`.
+
+### Supported Versions
+Kubernetes supports up to three minor versions, e.g., if 1.12 is the latest release, versions 1.12, 1.11, and 1.10 are supported. Before a new release (e.g., 1.13), ensure the cluster is upgraded to remain within supported versions.
+
+### Upgrade Path
+- Minor version upgrades must be done sequentially: e.g., 1.10 → 1.11 → 1.12 → 1.13.
+
+### Upgrade Methods
+1. **Managed Kubernetes Clusters**:
+   - Cloud providers like Google Kubernetes Engine offer straightforward upgrade options.
+2. **Clusters Deployed with kubeadm**:
+   - Use `kubeadm upgrade` commands.
+3. **Manually Deployed Clusters**:
+   - Upgrade each component individually.
+
+---
+
+## Upgrade Steps
+
+### Step 1: Upgrade Master Nodes
+1. Upgrade `kubeadm`:
+   ```bash
+   apt-get update && apt-get install -y kubeadm=<new-version>
+   ```
+2. Check the upgrade plan:
+   ```bash
+   kubeadm upgrade plan
+   ```
+3. Upgrade the control plane:
+   ```bash
+   kubeadm upgrade apply <new-version>
+   ```
+4. Upgrade `kubelet`:
+   ```bash
+   apt-get install -y kubelet=<new-version>
+   systemctl restart kubelet
+   ```
+5. Verify the upgrade:
+   ```bash
+   kubectl get nodes
+   ```
+
+### Step 2: Upgrade Worker Nodes
+1. **Drain the Node**:
+   ```bash
+   kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
+   ```
+2. **Upgrade Components**:
+   - Upgrade `kubeadm`:
+     ```bash
+     apt-get update && apt-get install -y kubeadm=<new-version>
+     ```
+   - Apply node configuration:
+     ```bash
+     kubeadm upgrade node
+     ```
+   - Upgrade `kubelet`:
+     ```bash
+     apt-get install -y kubelet=<new-version>
+     systemctl restart kubelet
+     ```
+3. **Uncordon the Node**:
+   ```bash
+   kubectl uncordon <node-name>
+   ```
+
+4. Repeat the steps for all worker nodes.
+
+---
+
+### Alternate Strategies
+1. **All-at-Once**:
+   - Upgrade all nodes simultaneously but incurs downtime.
+2. **Rolling Upgrades**:
+   - Upgrade nodes one by one to avoid downtime.
+3. **Replace Nodes**:
+   - Provision new nodes with the updated version and decommission old nodes.
+
+---
+
+This concludes the upgrade process. Proceed to the practice tests to solidify your understanding.

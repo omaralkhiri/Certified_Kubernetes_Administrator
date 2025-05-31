@@ -1,0 +1,58 @@
+### Documentation for Manually Scheduling Pods on Nodes
+
+#### Overview
+In Kubernetes, scheduling pods on nodes is typically handled by the Kubernetes scheduler. However, in scenarios where the built-in scheduler is unavailable or if you wish to manually schedule pods, you can assign a node to a pod either at creation time or after it has been created.
+
+#### Key Concepts:
+1. **`nodeName` field**: A field in the pod specification that determines which node the pod should run on. By default, this field is not set, and Kubernetes' scheduler will assign the pod to an appropriate node.
+
+2. **Binding Object**: The object used by the scheduler to bind a pod to a specific node. If the scheduler is unavailable, you can create this object manually.
+
+3. **Scheduling Without a Scheduler**: If there is no active scheduler in the cluster, pods remain in a pending state.
+
+#### Manual Pod Scheduling
+
+##### 1. Scheduling a Pod During Creation:
+To manually schedule a pod at creation time, you can set the `nodeName` field in the pod’s specification file to the name of the node where you want the pod to run. 
+
+Example:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  nodeName: <node-name>  # Specify the node name here
+  containers:
+  - name: mycontainer
+    image: myimage
+```
+
+##### 2. Scheduling an Existing Pod:
+Once a pod is created, the `nodeName` field cannot be modified directly via the Kubernetes API. To assign a node to an already created pod, you need to create a **binding object** and send a **POST request** to the Kubernetes API.
+
+Steps:
+- **Create a Binding Object**: This object mimics what the scheduler would create and binds the pod to a specified node.
+- **Send a POST request** to the **Pods Binding API**: The request should contain the binding object in JSON format.
+
+Example Binding Object (JSON):
+```json
+{
+  "kind": "Binding",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "mypod"
+  },
+  "target": {
+    "apiVersion": "v1",
+    "kind": "Node",
+    "name": "<node-name>"
+  }
+}
+```
+
+##### 3. Converting YAML to JSON:
+When creating the binding object, you must convert it from YAML to JSON format, as Kubernetes accepts binding objects in JSON format.
+
+#### Conclusion
+By manually setting the `nodeName` field during pod creation or by creating a binding object for existing pods, you can bypass the need for a scheduler in Kubernetes and control where your pods are scheduled.

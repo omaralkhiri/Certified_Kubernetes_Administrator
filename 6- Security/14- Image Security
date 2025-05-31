@@ -1,0 +1,100 @@
+# Securing Images in Kubernetes
+
+## Introduction
+
+In this lecture, we will discuss securing images in Kubernetes. We will start with the basics of image names and then move on to secure image repositories. Additionally, we will cover how to configure your pods to use images from secure repositories. Throughout this course, we have deployed various types of pods hosting different applications, such as web apps, databases, Redis, and cache systems. Let's begin with a simple pod definition file.
+
+## Understanding Image Names
+
+Consider the following example where we use the `nginx` image to deploy an NGINX container:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx
+```
+
+Let's take a closer look at the image name `nginx`. This name follows the Docker image naming convention. The name `nginx` refers to the image or repository name. When you specify `nginx`, it actually refers to `library/nginx`. The first part of the name (`library`) stands for the user or account name. If you don't provide a user or account name, it defaults to `library`. The `library` account is where Docker's official images are stored. These images promote best practices and are maintained by a dedicated team responsible for reviewing and publishing these official images.
+
+If you create your own account and repositories or images under it, you would use a similar pattern, replacing `library` with your name or your company's name.
+
+## Image Registries
+
+Where are these images stored and pulled from? Since we have not specified the location, it defaults to Docker's default registry, Docker Hub. The DNS name for Docker Hub is `docker.io`. A registry is where all the images are stored. Whenever you create a new image or update an existing one, you push it to the registry. Similarly, whenever anyone deploys an application, the image is pulled from the registry.
+
+There are many other popular registries as well. For example, Google's registry is `gcr.io`, where many Kubernetes-related images are stored, such as those used for performing end-to-end tests of the cluster. These are publicly accessible images that anyone can download and use.
+
+For applications built in-house that should not be made publicly available, hosting an internal private registry may be a good solution. Many cloud service providers, such as AWS, Azure, and GCP, provide private registries by default.
+
+## Private Registries and Authentication
+
+On any of these solutions—be it Docker Hub, Google's registry, or your internal private registry—you may choose to make a repository private so that it can be accessed using a set of credentials.
+
+From Docker's perspective, to run a container using a private image, you first log in to your private registry using the `docker login` command and input your credentials. Once successful, you can run the application using the image from the private registry.
+
+Going back to our pod definition file, to use an image from a private registry, we replace the image name with the full path to the image in the private registry. For example:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: private-registry-pod
+spec:
+  containers:
+  - name: private-container
+    image: myprivateregistry.io/myimage:tag
+```
+
+But how do we implement the authentication (the login part)? How does Kubernetes get the credentials to access the private registry?
+
+## Kubernetes and Private Registry Authentication
+
+Within Kubernetes, images are pulled and run by the Docker runtime on the worker nodes. To pass the credentials to the Docker runtime on the worker nodes, we first create a Secret object with the credentials in it. The Secret is of type `docker-registry`, and we name it `regcred`. The `docker-registry` is a built-in Secret type designed for storing Docker credentials.
+
+Here is an example of creating a Secret:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: regcred
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: <base64-encoded-docker-config>
+```
+
+You can create the Secret using the `kubectl create secret` command:
+
+```bash
+kubectl create secret docker-registry regcred \
+  --docker-server=<your-registry-server> \
+  --docker-username=<your-username> \
+  --docker-password=<your-password> \
+  --docker-email=<your-email>
+```
+
+Once the Secret is created, you specify it inside your pod definition file under the `imagePullSecrets` section:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: private-registry-pod
+spec:
+  containers:
+  - name: private-container
+    image: myprivateregistry.io/myimage:tag
+  imagePullSecrets:
+  - name: regcred
+```
+
+When the pod is created, Kubernetes (or the kubelet on the worker node) uses the credentials from the Secret to pull the image from the private registry.
+
+## Conclusion
+
+In this lecture, we covered the basics of image names, registries, and how to secure images by using private registries and Kubernetes Secrets. By following these practices, you can ensure that your container images are securely stored and accessed within your Kubernetes clusters.

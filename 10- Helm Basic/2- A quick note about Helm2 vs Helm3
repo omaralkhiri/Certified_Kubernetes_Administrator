@@ -1,0 +1,90 @@
+# Helm 2 vs. Helm 3: Key Differences and Improvements
+
+Helm has been a vital tool in the Kubernetes ecosystem, simplifying the deployment and management of applications through Kubernetes. It has undergone several changes and improvements over the years, with Helm 3 being the most recent and refined version. In this documentation, we will explore the significant differences between Helm 2 and Helm 3, highlighting the improvements, especially with the removal of Tiller and the introduction of new features that enhance security and usability.
+
+## Brief History of Helm
+
+- **Helm 1.0**: Released in February 2016.
+- **Helm 2.0**: Released in November 2016.
+- **Helm 3.0**: Released in November 2019.
+
+Since the initial launch in 2016, Helm has matured alongside Kubernetes, benefiting from its continuous improvements. By the time Helm 3 was introduced, Kubernetes itself had added features like Role-Based Access Control (RBAC) and Custom Resource Definitions (CRDs), which Helm could leverage for better security and functionality.
+
+## Major Changes from Helm 2 to Helm 3
+
+### 1. **Removal of Tiller**
+One of the most significant changes in Helm 3 is the removal of **Tiller**, the server-side component used in Helm 2.
+
+#### Helm 2:
+- Tiller acted as a middleman between the Helm CLI and the Kubernetes API server.
+- The Helm client would communicate with Tiller, which would then interact with Kubernetes to manage resources.
+- Tiller operated with broad privileges, often referred to as "god mode," meaning it had the ability to make any change within the Kubernetes cluster, leading to potential security issues.
+- Managing access control and permissions in Helm 2 required configuring Tiller, which was cumbersome and error-prone.
+
+#### Helm 3:
+- **Tiller has been removed** entirely in Helm 3.
+- Helm 3 directly communicates with Kubernetes, removing the middle layer and simplifying the architecture.
+- With **Role-Based Access Control (RBAC)** built into Kubernetes, security is now managed more granularly.
+- Helm 3 leverages Kubernetes' RBAC to define permissions, ensuring that users can only perform actions they are allowed to, regardless of whether they are using `kubectl` or `helm`.
+
+### 2. **Three-Way Strategic Merge Patch**
+
+Helm 3 introduces the concept of a **three-way strategic merge patch** to improve the handling of rollbacks and upgrades.
+
+#### Helm 2:
+- When performing a rollback in Helm 2, the system would compare the current and previous chart versions.
+- If manual changes were made outside of Helm (e.g., using `kubectl` to update an image), Helm 2 would not detect the changes, potentially causing issues when rolling back to a previous state.
+
+#### Helm 3:
+- Helm 3 is **smarter** and performs a three-way merge between the current state of the deployment, the last deployed revision, and the desired state.
+- This means Helm 3 can detect changes made outside of Helm, such as manual updates with `kubectl`, and include those changes in its rollback process.
+- With the three-way strategic merge patch, Helm 3 compares the live state of the Kubernetes objects to the desired state defined in the Helm chart, making more intelligent decisions when performing rollbacks or upgrades.
+
+### 3. **Handling Upgrades and Changes**
+
+In Helm 2, upgrading an application with Helm could result in losing manual changes made to Kubernetes objects. Helm 3 addresses this issue.
+
+#### Helm 2:
+- When upgrading, Helm 2 would compare the old chart to the new chart, and any changes that existed in the live state but weren't defined in the old chart would be lost.
+- This could be problematic if you had made manual modifications to deployed resources.
+
+#### Helm 3:
+- Helm 3 looks at the **live state** of resources in the cluster in addition to the Helm charts.
+- It ensures that any manual changes made to Kubernetes resources (e.g., manually added annotations, labels, or configurations) are preserved during upgrades.
+- The upgrade process in Helm 3 intelligently merges changes, so you don't lose any customizations or configurations that were made outside of Helm.
+
+### 4. **Security Improvements with RBAC**
+
+The removal of Tiller and the integration with Kubernetes RBAC in Helm 3 makes security more manageable.
+
+#### Helm 2:
+- Tiller had to be configured with permissions, which was error-prone and required careful management to ensure security.
+- Tiller ran with broad privileges, increasing the risk of security issues.
+
+#### Helm 3:
+- Helm 3 uses Kubernetes' **built-in RBAC** to manage user permissions.
+- Permissions are now tied to the user, so whether you're interacting with Kubernetes through `kubectl` or Helm, the access control is consistent and fine-grained.
+- Users can now be restricted to specific namespaces or actions, improving the overall security posture of the cluster.
+
+### 5. **Chart Revisions and Rollbacks**
+
+Both Helm 2 and Helm 3 support revisions, which allow you to roll back to a previous version of a release. However, the way these rollbacks are handled differs between the two versions.
+
+#### Helm 2:
+- In Helm 2, a rollback would only compare the current chart and the previous chart version, potentially missing manual changes made to the resources in the cluster.
+
+#### Helm 3:
+- Helm 3 tracks **chart revisions** but also compares the current live state of the resources, ensuring a more accurate and complete rollback.
+- This approach prevents issues where manual changes could be overlooked during a rollback, ensuring that your system is restored to its intended state, even if changes were made manually.
+
+## Conclusion
+
+Helm 3 offers several improvements over Helm 2, particularly in terms of security, ease of use, and handling of rollbacks and upgrades. By removing Tiller, Helm 3 simplifies the architecture and leverages Kubernetes' native RBAC for more secure access control. The introduction of the three-way strategic merge patch makes Helm 3 smarter when performing rollbacks or upgrades, ensuring that manual changes are preserved. These changes make Helm 3 a more efficient and secure tool for managing Kubernetes applications.
+
+### Key Takeaways:
+- **Tiller removed**: Helm 3 eliminates the need for the Tiller component, directly communicating with Kubernetes and using RBAC for fine-grained security.
+- **Smarter rollbacks**: Helm 3 uses a three-way merge to compare the live state with the desired state, ensuring that manual changes are preserved.
+- **Improved upgrades**: Helm 3 can detect manual changes during upgrades and preserve them.
+- **RBAC security**: Helm 3 relies on Kubernetes' RBAC for secure access management.
+
+Helm 3 is a better-designed tool that leverages Kubernetes' advancements to simplify application deployment and management in a more secure and intuitive way.

@@ -1,0 +1,120 @@
+# Kubernetes Authorization Documentation
+
+## Overview
+
+In Kubernetes, **authentication** is the process of verifying the identity of a user or service attempting to access the cluster. Once authenticated, **authorization** determines what actions the user or service is allowed to perform. Authorization is crucial for ensuring that users and applications have the appropriate level of access to resources within the cluster, based on their roles and responsibilities.
+
+This document explains the need for authorization in Kubernetes, the different authorization mechanisms supported, and how they work.
+
+---
+
+## Why Authorization is Needed
+
+As a cluster administrator, you have full access to perform all operations within the cluster, such as viewing, creating, and deleting objects like pods, nodes, and deployments. However, when multiple users and applications (e.g., developers, testers, monitoring tools, or CI/CD pipelines like Jenkins) access the cluster, it is essential to restrict their access to only what is necessary for their tasks.
+
+For example:
+- **Developers** should be able to deploy applications but not modify cluster configurations like adding or deleting nodes.
+- **Service accounts** for external applications should have the minimum permissions required to perform their tasks.
+- When using **namespaces** to logically partition the cluster for different teams or organizations, users should only have access to their designated namespaces.
+
+Authorization ensures that users and applications can only perform actions that align with their roles, enhancing security and reducing the risk of accidental or malicious changes.
+
+---
+
+## Kubernetes Authorization Mechanisms
+
+Kubernetes supports several authorization mechanisms, which can be used individually or in combination:
+
+### 1. **Node Authorization**
+The **Node Authorizer** handles requests from **kubelets** (the primary node agents in Kubernetes). Kubelets access the API server to:
+- Read information about services, endpoints, nodes, and pods.
+- Report node status to the API server.
+
+For node authorization to work:
+- Kubelets must be part of the **system:nodes** group.
+- Their usernames must be prefixed with **system:node**.
+
+Any request from a user in the **system:nodes** group is authorized by the Node Authorizer and granted the necessary privileges.
+
+---
+
+### 2. **Attribute-Based Access Control (ABAC)**
+In **Attribute-Based Access Control (ABAC)**, permissions are associated with users or groups through a policy file defined in JSON format. For example:
+- A policy might specify that the `dev` user can view, create, and delete pods.
+
+To implement ABAC:
+- Create a policy file with the required permissions.
+- Pass the file to the API server.
+
+However, ABAC has limitations:
+- Policy files must be manually edited and updated.
+- The API server must be restarted for changes to take effect.
+- Managing policies for multiple users or groups can become complex.
+
+---
+
+### 3. **Role-Based Access Control (RBAC)**
+**Role-Based Access Control (RBAC)** simplifies authorization management by defining roles with specific permissions and associating users or groups with those roles. For example:
+- Create a **developer role** with permissions to deploy applications.
+- Assign all developers to this role.
+
+Benefits of RBAC:
+- Changes to permissions are made at the role level and automatically apply to all associated users.
+- Provides a standardized and scalable approach to managing access.
+
+RBAC is the recommended authorization mechanism for most Kubernetes clusters.
+
+---
+
+### 4. **Webhook Authorization**
+**Webhook Authorization** allows you to outsource authorization decisions to an external service. For example:
+- Use a third-party tool like **Open Policy Agent (OPA)** to evaluate access requests.
+- Kubernetes makes an API call to the external service with user and request details.
+- The external service responds with an allow or deny decision.
+
+This mechanism is useful for integrating Kubernetes with existing authorization systems.
+
+---
+
+### 5. **Always Allow and Always Deny**
+Kubernetes also supports two simple authorization modes:
+- **Always Allow**: Grants access to all requests without performing any authorization checks.
+- **Always Deny**: Denies all requests.
+
+These modes are typically used for testing or specific use cases and are not recommended for production environments.
+
+---
+
+## Configuring Authorization Modes
+
+Authorization modes are configured using the `--authorization-mode` flag on the **kube-apiserver**. You can specify one or more modes as a comma-separated list. For example:
+```bash
+--authorization-mode=Node,RBAC,Webhook
+```
+
+### Default Behavior
+If no authorization mode is specified, the default is **Always Allow**.
+
+### Order of Evaluation
+When multiple authorization modes are configured:
+1. Requests are evaluated by each mode in the order they are specified.
+2. If a mode denies the request, it is forwarded to the next mode in the chain.
+3. If a mode approves the request, no further checks are performed, and access is granted.
+
+For example:
+- A user request is first evaluated by the **Node Authorizer**.
+  - If the request is not related to node operations, it is denied and forwarded to the next mode.
+- The **RBAC Authorizer** evaluates the request and grants access if the user has the required permissions.
+
+---
+
+## Summary
+
+Authorization is a critical component of Kubernetes security, ensuring that users and applications have the appropriate level of access to cluster resources. Kubernetes provides multiple authorization mechanisms, including:
+- **Node Authorization** for kubelet requests.
+- **Attribute-Based Access Control (ABAC)** for simple policies.
+- **Role-Based Access Control (RBAC)** for scalable and manageable access control.
+- **Webhook Authorization** for external authorization services.
+- **Always Allow** and **Always Deny** for specific use cases.
+
+By configuring and combining these mechanisms, you can create a robust authorization system tailored to your cluster's needs.

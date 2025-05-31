@@ -1,0 +1,180 @@
+# **Networking Basics in Linux: A Practical Guide**  
+
+## **1. Introduction**  
+This documentation covers fundamental networking concepts and practical configurations on Linux systems. The focus is on essential networking components like switches, routers, gateways, DNS, and Linux network namespaces. The goal is to provide a system administrator's or developer's perspective rather than deep network engineering theory.  
+
+---
+
+## **2. Basic Networking Concepts**  
+
+### **2.1 What is a Network?**  
+A network connects two or more computers (laptops, desktops, VMs, cloud instances) so they can communicate.  
+
+- **Example:**  
+  - Two computers, **A** (IP: `192.168.1.10`) and **B** (IP: `192.168.1.11`), are connected via a **switch**.  
+  - The switch enables communication within the same network (`192.168.1.0/24`).  
+
+### **2.2 How Systems Communicate Within a Network**  
+- Each system needs a **network interface** (physical or virtual).  
+- To view interfaces:  
+  ```sh
+  ip link
+  ```
+- To assign an IP address:  
+  ```sh
+  ip addr add 192.168.1.10/24 dev eth0
+  ```
+- To bring the interface up:  
+  ```sh
+  ip link set eth0 up
+  ```
+
+### **2.3 Communication Between Different Networks (Using a Router)**  
+If two networks (`192.168.1.0/24` and `192.168.2.0/24`) need to communicate, a **router** is required.  
+
+- The router has interfaces in both networks:  
+  - `192.168.1.1` (Network 1)  
+  - `192.168.2.1` (Network 2)  
+
+- **Problem:** How does `192.168.1.11` (System B) reach `192.168.2.10` (System C)?  
+  - **Solution:** Configure a **gateway (route)** on System B.  
+
+---
+
+## **3. Routing in Linux**  
+
+### **3.1 Viewing the Routing Table**  
+```sh
+ip route   # or simply `route`
+```
+Output:  
+```
+192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.11
+```
+
+### **3.2 Adding a Route**  
+To allow `192.168.1.11` to reach `192.168.2.0/24`:  
+```sh
+ip route add 192.168.2.0/24 via 192.168.1.1
+```
+- **Meaning:** "To reach `192.168.2.0/24`, send packets through `192.168.1.1`."  
+
+### **3.3 Default Gateway (For Internet Access)**  
+If a system needs internet access, configure a **default gateway**:  
+```sh
+ip route add default via 192.168.1.1
+```
+- **Alternative:**  
+  ```sh
+  ip route add 0.0.0.0/0 via 192.168.1.1
+  ```
+
+### **3.4 Troubleshooting Routing Issues**  
+- If a system cannot reach the internet, check:  
+  - Is the default gateway set? (`ip route`)  
+  - Can the gateway be pinged? (`ping 192.168.1.1`)  
+
+---
+
+## **4. Configuring a Linux Host as a Router**  
+
+### **4.1 Example Setup**  
+- **Host A:** `192.168.1.5`  
+- **Host B (Router):** `192.168.1.6` (eth0) and `192.168.2.6` (eth1)  
+- **Host C:** `192.168.2.5`  
+
+**Goal:** Allow `Host A` to ping `Host C`.  
+
+### **4.2 Steps**  
+
+#### **Step 1: Add Routes on Host A and Host C**  
+- **On Host A:**  
+  ```sh
+  ip route add 192.168.2.0/24 via 192.168.1.6
+  ```
+- **On Host C:**  
+  ```sh
+  ip route add 192.168.1.0/24 via 192.168.2.6
+  ```
+
+#### **Step 2: Enable IP Forwarding on Host B (Router)**  
+By default, Linux does **not** forward packets between interfaces.  
+- Check current setting:  
+  ```sh
+  cat /proc/sys/net/ipv4/ip_forward
+  ```
+  - `0` = Disabled  
+  - `1` = Enabled  
+
+- Enable forwarding temporarily:  
+  ```sh
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+  ```
+- Make it persistent (edit `/etc/sysctl.conf`):  
+  ```sh
+  echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+  sysctl -p
+  ```
+
+#### **Step 3: Test Connectivity**  
+- From `Host A`:  
+  ```sh
+  ping 192.168.2.5
+  ```
+
+---
+
+## **5. Key Linux Networking Commands**  
+
+| **Command** | **Purpose** |
+|------------|------------|
+| `ip link` | List/modify network interfaces |
+| `ip addr` | Show IP addresses assigned to interfaces |
+| `ip addr add <IP>/<mask> dev <interface>` | Assign an IP address |
+| `ip route` | View routing table |
+| `ip route add <network> via <gateway>` | Add a route |
+| `ip route add default via <gateway>` | Set default gateway |
+| `cat /proc/sys/net/ipv4/ip_forward` | Check if IP forwarding is enabled |
+| `echo 1 > /proc/sys/net/ipv4/ip_forward` | Enable IP forwarding (temporary) |
+
+---
+
+## **6. Persisting Network Configurations**  
+Changes made via `ip` commands are **temporary**. To make them permanent:  
+
+### **6.1 Using `netplan` (Ubuntu)**
+Edit `/etc/netplan/*.yaml` and apply:  
+```sh
+netplan apply
+```
+
+### **6.2 Using `/etc/network/interfaces` (Debian/older systems)**
+Example:  
+```
+auto eth0  
+iface eth0 inet static  
+    address 192.168.1.10  
+    netmask 255.255.255.0  
+    gateway 192.168.1.1  
+```
+
+### **6.3 Using `nmcli` (NetworkManager)**
+```sh
+nmcli connection modify eth0 ipv4.addresses 192.168.1.10/24  
+nmcli connection modify eth0 ipv4.gateway 192.168.1.1  
+nmcli connection up eth0  
+```
+
+---
+
+## **7. Conclusion**  
+This guide covered:  
+- Basic networking (switches, routers, gateways).  
+- Configuring IP addresses and routes in Linux.  
+- Setting up a Linux host as a router.  
+- Key commands for network troubleshooting.  
+
+In the next section, we will discuss **DNS configurations** in Linux.  
+
+---
+**Next Lecture:** [DNS Configuration in Linux]

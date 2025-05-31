@@ -1,0 +1,106 @@
+### Persistent Volumes in Kubernetes
+
+#### Introduction
+Hello and welcome to this lecture on persistent volumes. My name is Maxhald Manabe.
+
+In the last lecture, we covered volumes in Kubernetes. In this session, we will discuss **persistent volumes** (PVs) and their role in Kubernetes storage management.
+
+#### Background
+Previously, we configured volumes within the pod definition file. This meant every storage configuration required for a volume was included directly in the pod definition. In environments with many users and numerous pods, this approach becomes cumbersome:
+- Users must configure storage for each pod individually.
+- Any changes to the storage configuration need to be updated in all relevant pod definition files.
+
+To streamline storage management, **persistent volumes** provide a centralized solution.
+
+#### What Are Persistent Volumes?
+A **persistent volume (PV)** is a cluster-wide pool of storage resources configured by an administrator. Users can allocate storage from this pool using **persistent volume claims (PVCs)**, which simplifies storage management and ensures consistency.
+
+This centralized approach allows administrators to:
+1. Preconfigure a pool of storage resources.
+2. Enable users to carve out portions of storage as needed.
+
+#### Creating a Persistent Volume
+Below are the steps to create a persistent volume:
+
+1. **Start with the Base Template**
+   Update the API version and set the kind to `PersistentVolume`. For example:
+
+   ```yaml
+   apiVersion: v1
+   kind: PersistentVolume
+   metadata:
+     name: pv-vol1
+   spec:
+     accessModes:
+       - ReadWriteOnce
+     capacity:
+       storage: 1Gi
+     hostPath:
+       path: /mnt/data
+   ```
+
+2. **Define Access Modes**
+   Access modes specify how the volume can be mounted. The supported access modes are:
+   - `ReadWriteOnce` (RWO): The volume can be mounted as read-write by a single node.
+   - `ReadOnlyMany` (ROX): The volume can be mounted as read-only by many nodes.
+   - `ReadWriteMany` (RWX): The volume can be mounted as read-write by many nodes.
+
+3. **Specify Capacity**
+   Set the storage capacity for the persistent volume. In the example above, `1Gi` of storage is reserved.
+
+4. **Set the Volume Type**
+   Initially, we can use a local storage type, such as `hostPath`, which points to a directory on the node’s filesystem. However, for production environments, use supported storage solutions such as:
+   - AWS Elastic Block Store (EBS)
+   - Google Persistent Disk
+   - Azure Disk
+   - Network File System (NFS)
+
+#### Example
+The following YAML demonstrates creating a persistent volume using `hostPath`:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-vol1
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /mnt/data
+```
+
+To create the persistent volume:
+1. Save the YAML file as `pv.yaml`.
+2. Run the command:
+   ```bash
+   kubectl apply -f pv.yaml
+   ```
+3. Verify the creation using:
+   ```bash
+   kubectl get persistentvolume
+   ```
+
+#### Note
+The `hostPath` option is for testing and development purposes only. It is not recommended for production environments. Replace `hostPath` with a cloud storage solution like AWS EBS, as demonstrated below:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-aws-ebs
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  awsElasticBlockStore:
+    volumeID: vol-1234567890abcdef0
+    fsType: ext4
+```
+
+#### Summary
+Persistent volumes offer a scalable and centralized method for managing storage in Kubernetes. By decoupling storage configuration from individual pods, administrators can streamline storage management and improve efficiency. In the next lecture, we will explore **persistent volume claims (PVCs)** and their usage in accessing the storage configured with persistent volumes.
+

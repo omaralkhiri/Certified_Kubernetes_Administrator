@@ -1,0 +1,141 @@
+### Lecture: Deploying Multiple Schedulers in a Kubernetes Cluster
+
+In this lecture, we will discuss how to deploy multiple schedulers in a Kubernetes cluster.
+
+#### Default Scheduler Overview
+
+Previously, we have seen how the default scheduler works in Kubernetes. The default scheduler has an algorithm that distributes pods across nodes evenly, while also considering various conditions, such as **taints and tolerations**, **node affinity**, etc.
+
+However, what if the default scheduler doesn’t meet your needs? For example, you may have a specific application that requires components to be placed on nodes after performing additional checks. In such cases, you can create your **custom scheduler** to implement your own scheduling algorithm, adding custom conditions and checks.
+
+#### Multiple Schedulers in Kubernetes
+
+Kubernetes is highly extensible, and you can write your own scheduler, package it, and deploy it either as the default scheduler or as an additional scheduler in the cluster. The **default scheduler** can handle general applications, while the custom scheduler can be assigned to specific applications as needed. 
+
+Thus, your Kubernetes cluster can run multiple schedulers at the same time, and each scheduler can be assigned to different pods based on the pod's requirements.
+
+#### Creating and Deploying Multiple Schedulers
+
+When deploying multiple schedulers, each scheduler must have a unique name to distinguish it from others. The default scheduler is named `default-scheduler`, and this name is configured in the `kube-scheduler` configuration file. You can specify other scheduler names by creating separate configuration files for each scheduler.
+
+##### 1. **Deploying an Additional Scheduler (Using kube-scheduler Binary)**
+
+To deploy an additional scheduler, you can use the **same kube-scheduler binary** or a custom-built one, depending on your requirements. Here's a simplified approach using the default binary:
+
+1. **Use the kube-scheduler binary** and configure it with a custom configuration file.
+2. Set a unique **scheduler name** in each scheduler’s configuration file.
+3. You can specify the **kubeconfig** file to authenticate with the Kubernetes API server.
+
+##### 2. **Deploying Scheduler as a Pod**
+
+Instead of using the kube-scheduler binary directly on a node, another approach is to deploy the scheduler as a pod. In this case, you need to create a pod definition file that specifies:
+
+- The path to the `kubeconfig` file.
+- A custom scheduler configuration file (passed using the config option).
+
+Additionally, there’s a configuration option called **leader election**, which ensures that only one instance of the scheduler is active in high availability setups. When multiple schedulers are running on different master nodes, leader election ensures that only one scheduler leads the scheduling process.
+
+##### 3. **Deploying Scheduler as a Deployment**
+
+For production environments, a more reliable approach is to deploy the scheduler as a **Kubernetes deployment**. You can:
+
+- Use the `kube-scheduler` binary or a custom-built scheduler binary.
+- Mount the custom scheduler configuration file as a **ConfigMap** or a **volume mount** in the deployment.
+- Ensure high availability using the **leader election** option (if running multiple replicas).
+
+This approach also requires configuring a **service account**, **cluster roles**, and **cluster role bindings** for authentication and access control.
+
+##### Example: Configuring the Scheduler Deployment
+
+In the deployment YAML file:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-scheduler
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-scheduler
+  template:
+    metadata:
+      labels:
+        app: custom-scheduler
+    spec:
+      containers:
+      - name: custom-scheduler
+        image: custom-scheduler-image
+        volumeMounts:
+        - name: scheduler-config
+          mountPath: /etc/scheduler/config
+      volumes:
+      - name: scheduler-config
+        configMap:
+          name: custom-scheduler-config
+```
+
+In this example, the `custom-scheduler` container is deployed with a **ConfigMap** that contains the scheduler configuration file.
+
+#### Configuring Pods to Use a Custom Scheduler
+
+Once you have deployed the custom scheduler, you can configure a pod or a deployment to use this new scheduler. To do this:
+
+1. Add the `schedulerName` field to your pod definition, specifying the name of the new scheduler.
+
+Example Pod YAML:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: custom-scheduler-pod
+spec:
+  schedulerName: custom-scheduler
+  containers:
+  - name: busybox
+    image: busybox
+    command: ["sleep", "1000"]
+```
+
+#### Verifying the Scheduler in Use
+
+To verify which scheduler picked up a pod, you can:
+
+1. **Check the Pod Events:**
+
+   Run the following command to list all events in the current namespace:
+
+   ```bash
+   kubectl get events -o wide
+   ```
+
+   Look for the `Scheduled` event, and the source of the event will show the name of the scheduler.
+
+2. **Check the Logs:**
+
+   If there are any issues, you can check the scheduler logs by using the `kubectl logs` command with the scheduler pod name:
+
+   ```bash
+   kubectl logs <scheduler-pod-name> -n kube-system
+   ```
+
+#### Troubleshooting: Pod Stuck in Pending State
+
+If a pod is stuck in the **pending** state, it typically means that the scheduler was not configured correctly. Use `kubectl describe pod <pod-name>` to check the status and logs for errors. Common issues include:
+
+- The **schedulerName** field is incorrectly specified.
+- The scheduler pod is not running or is misconfigured.
+
+#### Conclusion
+
+In this lecture, we have learned how to deploy and configure multiple schedulers in a Kubernetes cluster. By deploying custom schedulers, you can implement your own scheduling algorithms to better handle specific workloads. We also discussed how to configure pods to use a custom scheduler and how to troubleshoot scheduling issues.
+
+This setup provides you with the flexibility to run multiple schedulers within your cluster, allowing for specialized scheduling decisions for specific workloads.
+
+### Next Steps:
+
+- Explore **High Availability (HA)** setup for Kubernetes schedulers.
+- Practice deploying custom schedulers and troubleshooting scheduling issues.

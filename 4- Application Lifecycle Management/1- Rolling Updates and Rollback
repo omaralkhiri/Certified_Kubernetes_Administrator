@@ -1,0 +1,97 @@
+# Kubernetes Deployment: Updates and Rollbacks
+
+## Overview
+
+This guide explains how Kubernetes handles updates and rollbacks in deployments. It includes details about rollouts, versioning, deployment strategies, and rollback mechanisms.
+
+---
+
+## Rollouts and Versioning
+
+1. **Initial Deployment**:  
+   When you create a deployment, it triggers a **rollout**, creating a deployment revision (e.g., *revision one*).  
+
+2. **Upgrading the Deployment**:  
+   Updating the application (e.g., changing the container version) triggers a new rollout, creating a new deployment revision (e.g., *revision two*).  
+   - To check rollout status:  
+     ```bash
+     kubectl rollout status <deployment-name>
+     ```
+   - To view rollout history:  
+     ```bash
+     kubectl rollout history <deployment-name>
+     ```
+
+---
+
+## Deployment Strategies
+
+Kubernetes provides two deployment strategies:
+
+1. **Recreate Strategy**:  
+   - All existing instances are destroyed first.  
+   - New instances are created after the old ones are removed.  
+   - **Issue**: Application downtime during the transition.  
+
+2. **Rolling Update Strategy** (Default):  
+   - Old instances are replaced with new ones one by one.  
+   - **Advantage**: Ensures zero downtime and a seamless upgrade.  
+
+To inspect deployment details, use:  
+```bash
+kubectl describe deployment <deployment-name>
+```
+
+---
+
+## Updating Deployments
+
+You can update deployments in two ways:
+
+1. **Modify the Deployment Definition File**:  
+   - Edit the deployment file (e.g., update the container image or number of replicas).  
+   - Apply the changes:  
+     ```bash
+     kubectl apply -f <deployment-file.yaml>
+     ```
+
+2. **Use the `kubectl set image` Command**:  
+   - Update the image directly:  
+     ```bash
+     kubectl set image deployment/<deployment-name> <container-name>=<new-image>
+     ```  
+   - **Caution**: This approach may cause mismatches between the live deployment and the definition file.
+
+---
+
+## Rollback Mechanism
+
+If an upgrade introduces issues, Kubernetes allows rolling back to a previous revision.
+
+1. **Rollback Command**:  
+   ```bash
+   kubectl rollout undo <deployment-name>
+   ```
+   - This restores the application to the previous version.
+
+2. **Observing Rollback**:  
+   - Before rollback: The new replica set has active pods, and the old replica set has zero pods.  
+   - After rollback: The old replica set regains active pods, and the new replica set is scaled down to zero.
+
+---
+
+## Summary of Commands
+
+| Action                          | Command                                      |
+|---------------------------------|----------------------------------------------|
+| Create a deployment             | `kubectl create -f <deployment-file.yaml>`   |
+| List deployments                | `kubectl get deployments`                    |
+| Update a deployment             | `kubectl apply -f <deployment-file.yaml>`    |
+| Update container image          | `kubectl set image deployment/<name> ...`   |
+| View rollout status             | `kubectl rollout status <deployment-name>`   |
+| View rollout history            | `kubectl rollout history <deployment-name>`  |
+| Rollback a deployment           | `kubectl rollout undo <deployment-name>`     |
+
+---
+
+This documentation serves as a concise reference for managing updates and rollbacks in Kubernetes deployments.

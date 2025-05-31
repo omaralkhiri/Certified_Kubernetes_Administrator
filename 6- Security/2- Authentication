@@ -1,0 +1,70 @@
+# Authentication in a Kubernetes Cluster
+
+## Introduction
+This document provides an overview of authentication mechanisms in a Kubernetes cluster. A Kubernetes cluster consists of multiple nodes, either physical or virtual, and various components that work together. Different users access the cluster for various purposes:
+
+- **Administrators**: Manage and configure the cluster.
+- **Developers**: Deploy and test applications.
+- **End Users**: Access applications deployed on the cluster (managed by the applications themselves, so they are excluded from this discussion).
+- **Third-party Applications**: Integrate with the cluster for automation and other purposes.
+
+This document focuses on securing access to the Kubernetes cluster for administrative purposes using authentication mechanisms.
+
+## Kubernetes User Management
+Kubernetes does not manage user accounts natively. Instead, it relies on external sources such as:
+- A static file containing user details (username-password pairs or tokens).
+- Certificates for authentication.
+- Third-party identity services such as LDAP or Kerberos.
+
+Unlike human users, Kubernetes can manage **service accounts** natively using the Kubernetes API. Service accounts are discussed in a separate section.
+
+## Authentication in Kubernetes
+All user access in Kubernetes is managed by the **Kubernetes API Server**. Whether a user interacts with the cluster via `kubectl` or directly through the API, all requests must pass through the API Server, which handles authentication before processing them.
+
+### Authentication Mechanisms
+Kubernetes supports multiple authentication methods, including:
+1. **Static Password File**: A CSV file containing a list of usernames and passwords.
+2. **Static Token File**: A CSV file with tokens instead of passwords.
+3. **Certificate-based Authentication**.
+4. **Third-party Authentication Providers**: LDAP, Kerberos, OIDC, etc.
+
+We will begin by exploring the simplest authentication method: **Static Password and Token Files**.
+
+## Static Password and Token Files
+This is the simplest form of authentication but is not recommended for production due to security risks (storing credentials in plaintext).
+
+### Static Password File
+A **static password file** is a CSV file with the following format:
+```
+password,username,userID[,group]
+```
+- `password`: The user's password.
+- `username`: The username.
+- `userID`: A unique identifier for the user.
+- `group` (optional): The group the user belongs to.
+
+To use a static password file, specify the file path as an option to the API Server and restart it. If the cluster was set up using `kubeadm`, update the API Server’s pod definition file. The `kubeadm` tool will restart the API Server automatically.
+
+To authenticate using basic credentials with the API Server, use a `curl` command like this:
+```sh
+curl -k -u "username:password" https://<API-SERVER>/api/v1/nodes
+```
+
+### Static Token File
+A **static token file** follows a similar format:
+```
+token,username,userID[,group]
+```
+- `token`: The authentication token.
+- `username`: The associated username.
+- `userID`: A unique identifier.
+- `group` (optional): The user group.
+
+Specify the token file as an option (`--token-auth-file`) to the API Server. Then, authenticate using the token with an authorization bearer request:
+```sh
+curl -k -H "Authorization: Bearer <TOKEN>" https://<API-SERVER>/api/v1/nodes
+```
+
+## Conclusion
+Static password and token files provide a basic understanding of authentication in Kubernetes. However, since these methods store credentials in plaintext, they are **not recommended for production use**. In the next sections, we will explore more secure authentication mechanisms, including certificate-based authentication and third-party identity providers.
+

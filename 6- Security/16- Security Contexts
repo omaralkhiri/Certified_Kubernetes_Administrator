@@ -1,0 +1,129 @@
+# Kubernetes Security Context Documentation
+
+## Overview
+
+In Kubernetes, security contexts allow you to define security settings for pods and containers. These settings include options such as the user ID under which the container runs, Linux capabilities, and more. Security contexts can be configured at both the pod level and the container level. When configured at the pod level, the settings apply to all containers within the pod. However, if security settings are defined at both the pod and container levels, the container-level settings will override the pod-level settings.
+
+This documentation explains how to configure security contexts in Kubernetes using a pod definition file.
+
+---
+
+## Configuring Security Context
+
+### 1. **Pod-Level Security Context**
+To configure security settings at the pod level, add a `securityContext` field under the `spec` section of the pod definition file. For example, to set the user ID for the pod, use the `runAsUser` option.
+
+Here is an example of a pod definition file that runs an Ubuntu image with the `sleep` command and configures the security context at the pod level:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-demo
+spec:
+  securityContext:
+    runAsUser: 1000  # Run the pod as user with UID 1000
+  containers:
+  - name: ubuntu-container
+    image: ubuntu
+    command: ["sleep", "3600"]
+```
+
+In this example, the pod and all its containers will run as the user with UID `1000`.
+
+---
+
+### 2. **Container-Level Security Context**
+To configure security settings at the container level, add the `securityContext` field under the `containers` section of the pod definition file. If the `securityContext` is defined at both the pod and container levels, the container-level settings will take precedence.
+
+Here is an example of configuring the security context at the container level:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-demo
+spec:
+  containers:
+  - name: ubuntu-container
+    image: ubuntu
+    command: ["sleep", "3600"]
+    securityContext:
+      runAsUser: 2000  # Override the pod-level setting and run this container as user with UID 2000
+```
+
+In this example, the container will run as the user with UID `2000`, overriding any pod-level `runAsUser` setting.
+
+---
+
+### 3. **Adding Linux Capabilities**
+Linux capabilities allow you to grant specific privileges to a container without giving it full root access. To add capabilities, use the `capabilities` option under the `securityContext` field.
+
+Here is an example of adding capabilities to a container:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-demo
+spec:
+  containers:
+  - name: ubuntu-container
+    image: ubuntu
+    command: ["sleep", "3600"]
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN", "SYS_TIME"]  # Add NET_ADMIN and SYS_TIME capabilities
+```
+
+In this example, the container is granted the `NET_ADMIN` and `SYS_TIME` capabilities.
+
+---
+
+## Key Points to Remember
+1. **Pod-Level vs. Container-Level Settings**: 
+   - Pod-level `securityContext` applies to all containers in the pod.
+   - Container-level `securityContext` overrides pod-level settings for that specific container.
+
+2. **Common Security Options**:
+   - `runAsUser`: Specifies the user ID for running the container.
+   - `capabilities`: Adds or removes Linux capabilities.
+   - `runAsGroup`: Specifies the group ID for running the container.
+   - `readOnlyRootFilesystem`: Mounts the container's root filesystem as read-only.
+
+3. **Use Cases**:
+   - Restrict containers to run as non-root users for better security.
+   - Grant specific privileges to containers using capabilities.
+   - Enforce read-only root filesystems to prevent unauthorized modifications.
+
+---
+
+## Example Pod Definition File
+
+Below is a complete example of a pod definition file with security contexts configured at both the pod and container levels:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-demo
+spec:
+  securityContext:
+    runAsUser: 1000  # Pod-level: Run as user with UID 1000
+  containers:
+  - name: ubuntu-container
+    image: ubuntu
+    command: ["sleep", "3600"]
+    securityContext:
+      runAsUser: 2000  # Container-level: Override and run as user with UID 2000
+      capabilities:
+        add: ["NET_ADMIN", "SYS_TIME"]  # Add NET_ADMIN and SYS_TIME capabilities
+```
+
+---
+
+## Conclusion
+
+Configuring security contexts in Kubernetes is essential for enforcing security best practices in your cluster. By defining user IDs, Linux capabilities, and other security settings at the pod or container level, you can control how your applications run and reduce the risk of unauthorized access or privilege escalation.
+
+For more advanced security configurations, consider using Kubernetes features like **Pod Security Policies (PSP)** or **Pod Security Admission (PSA)** in newer versions of Kubernetes.

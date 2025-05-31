@@ -1,0 +1,102 @@
+# Kubernetes API Groups and Authorization
+
+## Understanding the Kubernetes API
+
+The Kubernetes API is the core interface for interacting with a Kubernetes cluster. Whether you use the `kubectl` utility or interact directly via REST API calls, all operations are handled by the **Kube API Server**. For example:
+- To check the cluster version, you can access the API server at the master node's address, followed by the default port `6443`, and the API version endpoint. This returns the cluster version.
+- To list pods, you can access the URL `/api/v1/pods`.
+
+The Kubernetes API is organized into multiple **API groups**, each serving a specific purpose. These groups include:
+- **Version API**: For viewing the cluster version.
+- **Metrics API**: For monitoring cluster health and performance.
+- **Logs API**: For integrating with third-party logging applications.
+
+In this documentation, we focus on the APIs responsible for cluster functionality, which are categorized into two main groups: **Core API Group** and **Named API Group**.
+
+---
+
+## Core API Group
+
+The **Core API Group** contains all the core functionalities of Kubernetes. Resources in this group include:
+- **Namespaces**
+- **Pods**
+- **Replication Controllers**
+- **Events**
+- **Nodes**
+- **Bindings**
+- **Persistent Volumes (PV)**
+- **Persistent Volume Claims (PVC)**
+- **ConfigMaps**
+- **Secrets**
+- **Services**
+
+These resources are essential for the basic operation of a Kubernetes cluster.
+
+---
+
+## Named API Group
+
+The **Named API Group** is more organized and is the preferred way to access newer features in Kubernetes. It includes groups for:
+- **Apps**: Deployments, ReplicaSets, StatefulSets.
+- **Extensions**: Custom resources and extensions.
+- **Networking**: Network Policies, Ingress.
+- **Storage**: Storage Classes, Volume Snapshots.
+- **Authentication**: Certificates, Certificate Signing Requests (CSRs).
+- **Authorization**: Roles, RoleBindings, ClusterRoles, ClusterRoleBindings.
+
+Each group contains specific resources, and each resource has a set of associated **verbs** (actions) that can be performed on it. For example, for a **Deployment**, the verbs include:
+- **List**: Retrieve a list of deployments.
+- **Get**: Retrieve details of a specific deployment.
+- **Create**: Create a new deployment.
+- **Delete**: Delete a deployment.
+- **Update**: Modify an existing deployment.
+- **Watch**: Monitor changes to a deployment.
+
+---
+
+## Accessing the Kubernetes API
+
+To explore the available API groups and resources, you can access the Kubernetes API server directly. By default, the API server listens on port `6443`. For example:
+- Accessing `/api` will list all available API groups.
+- Accessing `/apis` will list all supported resources under the named API groups.
+
+### Authentication
+When accessing the API directly (e.g., using `curl`), you must authenticate your requests. There are two common methods:
+1. **Using Certificates**:
+   Pass your certificate files in the `curl` command:
+   ```bash
+   curl --cert <client-certificate> --key <client-key> https://<master-node>:6443/api/v1/pods
+   ```
+
+2. **Using `kubectl proxy`**:
+   Start a local proxy service using the `kubectl proxy` command:
+   ```bash
+   kubectl proxy --port=8001
+   ```
+   This proxy uses credentials and certificates from your `kubeconfig` file. You can then access the API via `http://localhost:8001`.
+
+---
+
+## Key Differences: `kube-proxy` vs. `kubectl proxy`
+
+- **`kube-proxy`**:
+  - A network proxy running on each node in the cluster.
+  - Enables connectivity between pods and services across different nodes.
+  - Part of the Kubernetes networking layer.
+
+- **`kubectl proxy`**:
+  - An HTTP proxy service created by the `kubectl` utility.
+  - Used to access the Kubernetes API server locally.
+  - Simplifies API access by handling authentication and forwarding requests.
+
+---
+
+## Summary
+
+- All Kubernetes resources are grouped into **API groups**.
+- The **Core API Group** contains essential resources like pods, services, and namespaces.
+- The **Named API Group** organizes newer features into categories like apps, networking, and authentication.
+- Each resource has associated **verbs** (actions) like `list`, `get`, `create`, `delete`, and `update`.
+- Accessing the Kubernetes API requires authentication, either via certificates or using `kubectl proxy`.
+
+In the next section on **authorization**, we will explore how these API groups, resources, and verbs are used to control user access within a Kubernetes cluster.

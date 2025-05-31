@@ -1,0 +1,121 @@
+### Creating a Pod Using YAML Configuration in Kubernetes
+
+In this lecture, we will learn how to create a **Kubernetes pod** using a **YAML-based configuration file**. In the previous lecture, we covered YAML files in general. Now, we will focus on developing YAML files specifically for Kubernetes. Kubernetes uses YAML files to define objects such as **pods**, **replicas**, **deployments**, **services**, and more. These YAML files follow a standard structure, with key fields that are required for creating these Kubernetes objects.
+
+### Structure of a Kubernetes YAML File
+
+A Kubernetes definition file always contains four top-level fields:
+
+1. **apiVersion**
+2. **kind**
+3. **metadata**
+4. **spec**
+
+These are the root-level properties in the YAML file, and they are required for all Kubernetes object definitions. Let’s explore each one in detail.
+
+#### 1. **apiVersion**
+The **apiVersion** defines which version of the Kubernetes API is being used for creating the object. Depending on the type of object you are creating, you need to use the appropriate version. For example, when creating a pod, you will typically set the **apiVersion** to `v1`.
+
+Other versions you might encounter include `apps/v1`, `extensions/v1beta1`, and others. These versions are used for different Kubernetes objects, which we will explore in later sections of the course.
+
+#### 2. **kind**
+The **kind** field specifies the type of Kubernetes object you are creating. For this case, it will be a **pod**, so you will set the **kind** to `Pod`. Other possible values for this field include `ReplicaSet`, `Deployment`, `Service`, etc.
+
+#### 3. **metadata**
+The **metadata** section holds information about the object, such as its **name**, **labels**, and other identifying details. 
+
+- **Name**: This is the name of the object, which, in our case, is the name of the pod.
+- **Labels**: Labels are key-value pairs that help identify and group objects within Kubernetes. Labels are useful for organizing and filtering objects (e.g., pods running frontend applications, backend applications, databases, etc.).
+
+Note: The indentation is critical in YAML files. Ensure the properties under **metadata** (e.g., name, labels) are correctly indented as children of **metadata**. For example, the **labels** section should be indented to the right under the **name** property.
+
+Here’s an example:
+
+```yaml
+metadata:
+  name: my-app-pod
+  labels:
+    app: my-app
+```
+
+#### 4. **spec**
+The **spec** section defines the specifications of the object, such as the containers that will run in a pod. Since we are creating a pod with a single container, the **spec** will contain the **containers** field.
+
+- **containers**: This field is a list (or array), which is required because a pod can have multiple containers. In our case, we will define a single container for this pod.
+- Each item in the list represents a container within the pod and includes the container's **name** and **image** properties. For example, to run an **nginx** container, you would specify:
+
+```yaml
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+```
+
+Here, the dash (`-`) before **name** and **image** indicates that this is the first (and in this case, the only) container in the pod.
+
+### Example YAML File for a Pod
+
+Now, let’s combine everything into a complete YAML file for creating a pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-app-pod
+  labels:
+    app: my-app
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx
+```
+
+### Creating the Pod
+
+Once you have written your YAML file (e.g., `pod-definition.yaml`), you can create the pod in your Kubernetes cluster by running the following command:
+
+```bash
+kubectl create -f pod-definition.yaml
+```
+
+This will create a pod in your Kubernetes cluster with the configuration defined in the YAML file.
+
+### Viewing the Pod
+
+After creating the pod, you can check the status of the pod using the following command:
+
+```bash
+kubectl get pods
+```
+
+This will display a list of all the pods in your cluster, including the one we just created. You will see that the pod is in different states, such as **"ContainerCreating"** or **"Running"**.
+
+#### Viewing Detailed Information
+
+To see more detailed information about the pod, use the **describe** command:
+
+```bash
+kubectl describe pod my-app-pod
+```
+
+This will provide detailed information about the pod, including:
+
+- The time it was created
+- Labels assigned to it
+- The Docker containers running inside the pod
+- Events related to the pod (such as creation, status changes, etc.)
+
+### Conclusion
+
+In this lecture, we learned how to create a Kubernetes pod using a YAML-based configuration file. To summarize:
+
+1. A Kubernetes YAML file always has four top-level fields: **apiVersion**, **kind**, **metadata**, and **spec**.
+2. **apiVersion** defines the Kubernetes API version, **kind** specifies the type of object, **metadata** includes identifying information (like name and labels), and **spec** defines the container(s) inside the pod.
+3. After creating the YAML file, we use the `kubectl create -f` command to create the pod in the cluster.
+4. Use `kubectl get pods` to view the list of pods and `kubectl describe pod <pod-name>` to see detailed information about a specific pod.
+
+In the next lecture, we will dive deeper into more advanced topics related to Kubernetes, such as services, scaling, and networking.
+
+--- 
+
+This document serves as a guide to creating Kubernetes pods using YAML configuration. It explains the YAML structure, the key fields involved, and provides an example configuration to help you understand how to deploy and manage pods in Kubernetes.

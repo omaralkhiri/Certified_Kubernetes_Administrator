@@ -1,0 +1,100 @@
+# **Kubernetes Cluster Networking Configuration Documentation**  
+
+## **1. Introduction**  
+In a Kubernetes cluster, networking configurations are crucial for ensuring seamless communication between master (control plane) and worker nodes. This documentation outlines the networking requirements, including interface configurations, host settings, and essential ports that must be opened for proper cluster functionality.  
+
+---
+
+## **2. Node Networking Requirements**  
+Each node (master and worker) in a Kubernetes cluster must meet the following networking prerequisites:  
+
+### **2.1 Network Interface Configuration**  
+- Each node must have **at least one network interface** connected to the network.  
+- Each interface must have a **unique IP address** configured.  
+- Nodes must have **unique hostnames** (avoid duplicates, especially when cloning VMs).  
+- Each interface must have a **unique MAC address** (critical when VMs are cloned).  
+
+### **2.2 Firewall & Port Requirements**  
+To ensure proper communication between Kubernetes components, the following ports must be accessible:  
+
+#### **Master Node Ports**  
+| Port       | Protocol | Component               | Purpose                                                                 |
+|------------|----------|-------------------------|-------------------------------------------------------------------------|
+| **6443**   | TCP      | API Server              | Entry point for `kubectl`, worker nodes, and external users.           |
+| **10250**  | TCP      | Kubelet                 | Used by control plane and worker nodes to communicate with the Kubelet. |
+| **10259**  | TCP      | Kube Scheduler          | Required for scheduler communication.                                  |
+| **10257**  | TCP      | Kube Controller Manager | Used by the controller manager for internal operations.                |
+| **2379**   | TCP      | etcd Server             | Storage backend for cluster state (single-master setup).               |
+| **2380**   | TCP      | etcd Peer Communication | Required in multi-master setups for etcd client communication.         |
+
+#### **Worker Node Ports**  
+| Port Range    | Protocol | Component | Purpose                                  |
+|---------------|----------|-----------|------------------------------------------|
+| **30000-32767** | TCP      | NodePort  | Exposes Kubernetes services externally.  |
+| **10250**       | TCP      | Kubelet   | Communication with control plane.        |
+
+---
+
+## **3. Network Security Considerations**  
+When setting up a Kubernetes cluster, ensure the following:  
+
+### **3.1 Firewall Rules**  
+- **On-Premises / Local VMs:** Configure `iptables`/`nftables` or firewall rules (e.g., `ufw`, `firewalld`).  
+- **Cloud Environments (AWS, Azure, GCP):** Adjust **Network Security Groups (NSGs)** to allow traffic on required ports.  
+
+### **3.2 Troubleshooting Network Issues**  
+If cluster components fail to communicate:  
+1. Verify **hostnames and MAC addresses** (no duplicates).  
+2. Check **firewall/security group rules** for blocked ports.  
+3. Ensure **IP addressing** is correct (no conflicts).  
+4. Refer to the **[Kubernetes Official Documentation](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)** for updated port requirements.  
+
+---
+
+## **4. Practical Exercises**  
+To explore networking in an existing Kubernetes cluster, use the following commands:  
+
+### **4.1 Check Node Interfaces & IPs**  
+```sh
+ip a        # List network interfaces and IP addresses
+hostname    # Verify the hostname
+```
+
+### **4.2 Verify Open Ports**  
+```sh
+ss -tulnp  # Check listening ports on the node
+netstat -tuln  # Alternative (deprecated on some systems)
+```
+
+### **4.3 Inspect Kubelet Status**  
+```sh
+systemctl status kubelet  # Check if Kubelet is running
+journalctl -u kubelet -f  # View Kubelet logs
+```
+
+### **4.4 Test API Server Accessibility**  
+```sh
+curl -k https://<MASTER_IP>:6443  # Test API server connectivity
+kubectl cluster-info  # Verify cluster communication
+```
+
+---
+
+## **5. Conclusion**  
+Proper networking configuration is essential for a functional Kubernetes cluster. Ensure:  
+✅ Unique hostnames and MAC addresses.  
+✅ Correct IP addressing.  
+✅ Required ports are open in firewalls/security groups.  
+
+For further details, consult the **[Kubernetes Networking Documentation](https://kubernetes.io/docs/concepts/cluster-administration/networking/)**.  
+
+---
+**Next Steps:**  
+- Proceed to the **hands-on lab** to apply these networking configurations.  
+- Test cluster connectivity and troubleshoot any issues using the provided commands.  
+
+---
+**Documentation Version:** 1.0  
+**Last Updated:** [Current Date]  
+**Author:** [Your Name/Team]  
+**Reference:** Kubernetes Official Documentation

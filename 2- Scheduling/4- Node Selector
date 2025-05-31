@@ -1,0 +1,69 @@
+### Kubernetes Node Selectors Documentation
+
+#### Introduction
+
+In Kubernetes, **Node Selectors** allow you to constrain which nodes a pod can be scheduled on based on the node's labels. Node selectors are a simple way to ensure that specific workloads run on specific nodes, especially when you have nodes with different hardware resources in your cluster. In this documentation, we will discuss how to use node selectors and their limitations.
+
+#### Example Scenario
+
+Let's imagine you have a three-node Kubernetes cluster. Two of the nodes have lower hardware resources, while the third node is larger and has more resources. You have various workloads running on the cluster, and you want to dedicate the data processing workloads (which require more resources) to the larger node. This ensures that these workloads will not run out of resources in case the job demands extra processing power.
+
+In the default Kubernetes setup, any pod can be scheduled on any node, and as a result, a pod like **Pod C** may be scheduled on the smaller nodes, which is not desirable. To solve this, you can restrict where certain pods can be scheduled by using **Node Selectors**.
+
+#### How Node Selectors Work
+
+Node selectors are a simple way to specify the desired node for a pod by matching node labels. Let's go through the steps to achieve this.
+
+### Step 1: Label the Nodes
+
+Before using node selectors in a pod definition, you first need to label the nodes in your cluster. The label helps Kubernetes identify the nodes based on their characteristics.
+
+To label a node, you use the `kubectl label` command. For example, to label **node-1** as having a larger size, you can run:
+
+```bash
+kubectl label nodes node-1 size=large
+```
+
+This command adds the label `size=large` to **node-1**, indicating that this node is larger and can handle more resource-intensive workloads.
+
+### Step 2: Define the Pod with Node Selector
+
+Once the nodes are labeled, you can define a pod that will be restricted to run only on the node labeled `size=large`. In the pod definition YAML file, you would add a `nodeSelector` field under the `spec` section.
+
+Here is an example of a pod definition that uses a node selector:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: data-processing-pod
+spec:
+  containers:
+  - name: data-processing-container
+    image: data-processing-image
+  nodeSelector:
+    size: large
+```
+
+In this example:
+- The `nodeSelector` specifies that the pod should only be scheduled on nodes with the label `size=large`.
+- When this pod is created, Kubernetes will place it on **node-1**, which has the `size=large` label.
+
+#### Limitations of Node Selectors
+
+While node selectors are simple and useful, they come with certain limitations:
+1. **Single Label Matching**: The `nodeSelector` only allows you to match a pod to a node based on a single label key-value pair. This is fine for simple use cases but can be limiting for more complex requirements.
+2. **No Logical Operators**: You cannot use logical operators (e.g., "OR", "AND", "NOT") to match nodes. This means you cannot express more complex rules like "place the pod on a large OR medium node" or "place the pod on any node that is not small".
+
+#### Advanced Node Placement with Node Affinity
+
+To handle more complex scheduling requirements, Kubernetes introduced **Node Affinity** and **Anti-Affinity**.
+
+- **Node Affinity** allows you to specify rules such as "place the pod on a node with a label `size=large` or `size=medium`".
+- **Node Anti-Affinity** allows you to specify rules such as "avoid placing the pod on a node with a label `size=small`".
+
+These features provide more flexibility and power compared to node selectors and allow you to create more advanced scheduling strategies.
+
+### Conclusion
+
+**Node selectors** in Kubernetes provide a simple way to control where pods are scheduled based on node labels. While node selectors are easy to use, they have limitations when dealing with more complex scheduling requirements. For more advanced use cases, **Node Affinity** and **Anti-Affinity** offer greater flexibility and should be considered when your scheduling needs go beyond what node selectors can achieve.

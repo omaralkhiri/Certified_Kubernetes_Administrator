@@ -1,0 +1,52 @@
+## High Availability in Kubernetes: Understanding Master Node Failures and Configurations
+
+### Introduction
+
+High availability in Kubernetes is crucial for ensuring that applications remain operational even in the face of failures or disruptions. This involves configuring the cluster to minimize downtime by replicating critical components across multiple nodes. In this documentation, we will explore what happens when a master node fails, how to configure multiple master nodes for high availability, and the roles of different control plane components.
+
+### What Happens When a Master Node Fails?
+
+If a single master node fails in a Kubernetes cluster, the cluster becomes read-only. Existing workloads continue to run, but new deployments, autoscaling, and updates are halted. The worker nodes remain operational, allowing applications to continue running until a pod fails or needs to be rescheduled. However, without an active master node, there is no way to recreate or schedule new pods, and external management via `kubectl` or the API is not possible[4][6].
+
+### Configuring Multiple Master Nodes for High Availability
+
+To achieve high availability, it is essential to have multiple master nodes. This setup ensures that if one master fails, the others can continue managing the cluster. Here are key considerations for configuring multiple master nodes:
+
+- **Master Node Redundancy**: Deploy multiple master nodes across different physical locations or availability zones. This ensures that the cluster remains operational even if one master node fails[3][5].
+
+- **etcd Clustering**: etcd is a distributed key-value store that holds the cluster's state. A three-node etcd cluster provides optimal reliability and performance, allowing the cluster to tolerate one node failure while maintaining a quorum[5].
+
+- **Load Balancing for API Servers**: Use a load balancer to distribute traffic across multiple API servers. This allows you to point `kubectl` to the load balancer instead of a single master node[8].
+
+### Roles of Control Plane Components
+
+1. **API Server**: Handles all API operations and can run in active-active mode, meaning all instances serve traffic simultaneously. In a multi-master setup, use a load balancer to distribute requests across API servers[5][8].
+
+2. **Controller Manager and Scheduler**: These components operate in active-standby mode to prevent conflicts. They use leader election to determine which instance is active at any given time. This ensures that only one instance performs management operations, preventing duplication of efforts[8].
+
+3. **etcd**: Stores the cluster's state and uses the Raft consensus algorithm for consistency. etcd can be configured in stacked or external topologies. External etcd provides better isolation and performance but requires additional infrastructure[5][8].
+
+### Best Practices for High Availability
+
+- **Replication and Autoscaling**: Use replication controllers or deployments to ensure multiple replicas of your pods. Implement horizontal pod autoscaling (HPA) to dynamically adjust the number of replicas based on load[1][3].
+
+- **Node-Level Failure Handling**: Distribute nodes across different availability zones to ensure that node failures do not disrupt the entire cluster[1].
+
+- **Monitoring and Alerting**: Continuously monitor cluster components and set up alerting systems to quickly respond to potential issues before they escalate[3].
+
+### Conclusion
+
+Achieving high availability in Kubernetes requires careful planning and configuration of multiple master nodes, etcd clustering, and load balancing for API servers. By understanding how each control plane component works and implementing best practices for replication, autoscaling, and monitoring, you can ensure that your Kubernetes cluster remains operational even in the face of failures.
+
+Citations:
+[1] https://k21academy.com/docker-kubernetes/high-availability-and-scalable-application-in-kubernetes/
+[2] https://stackoverflow.com/questions/63411208/what-happens-if-master-node-dies-in-kubernetes-how-to-resolve-the-issue
+[3] https://kubeops.net/blog/achieving-high-availability-in-kubernetes-clusters
+[4] https://stackoverflow.com/questions/39172131/what-happens-when-the-kubernetes-master-fails
+[5] https://trilio.io/kubernetes-disaster-recovery/kubernetes-high-availability/
+[6] https://blog.devops.dev/youre-missing-this-critical-detail-about-kubernetes-master-worker-failures-434277553f02
+[7] https://www.reddit.com/r/kubernetes/comments/1hfblru/how_to_set_up_a_3_master_node_cluster_for_high/
+[8] https://discuss.kubernetes.io/t/high-availability-host-numbers/13143
+
+---
+Answer from Perplexity: https://www.perplexity.ai/search/and-welcome-to-this-lecture-we-aZnZOoCMSUifT.DiZm260A?utm_source=copy_output

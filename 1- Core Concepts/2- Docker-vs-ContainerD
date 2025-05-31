@@ -1,0 +1,89 @@
+# Kubernetes Container Runtimes and CLI Tools
+
+## Introduction
+In Kubernetes, container runtimes are crucial for managing containers. While Docker was once the dominant container runtime, Kubernetes has evolved to support other container runtimes through the **Container Runtime Interface (CRI)**. This documentation explains the transition from Docker to containerd as the primary runtime for Kubernetes and introduces the command-line tools used to interact with containerd.
+
+---
+
+## Kubernetes and Docker
+
+### Docker in the Early Days
+Initially, Kubernetes was built to orchestrate Docker containers. Docker became the most popular container runtime due to its simple user experience and widespread adoption. Kubernetes and Docker were tightly coupled, with Kubernetes supporting only Docker in its early versions.
+
+### Introduction of Container Runtime Interface (CRI)
+As Kubernetes grew in popularity, other container runtimes like **Rocket** also wanted to be supported. To accommodate different runtimes, Kubernetes introduced the **Container Runtime Interface (CRI)**. The CRI allows Kubernetes to interact with any container runtime that adheres to the **Open Container Initiative (OCI)** standards.
+
+### OCI Standards
+The OCI defines:
+- **Image Spec**: Specifications for how a container image should be built.
+- **Runtime Spec**: Specifications for how container runtimes should be developed.
+
+By adhering to these standards, any container runtime can be used with Kubernetes.
+
+### Docker Shim and CRI
+Since Docker was not designed to support CRI, Kubernetes introduced the **Docker shim** as a temporary solution to maintain compatibility. The shim allowed Docker to work without CRI support, but this was a workaround, not a long-term solution. Kubernetes continued to support Docker for a while, but as new runtimes like **containerd** gained traction, Kubernetes eventually phased out the Docker shim in version 1.24.
+
+---
+
+## Containerd
+
+### What is Containerd?
+**Containerd** is a high-level container runtime that was initially part of Docker. It is now an independent project and a **Cloud Native Computing Foundation (CNCF)** graduated project. Containerd is **CRI-compatible**, meaning it can be directly used with Kubernetes without Docker.
+
+### Transition from Docker to Containerd
+In Kubernetes version 1.24, support for Docker was removed, but Docker images that followed OCI standards continued to work. This ensured that existing Docker images remained compatible with Kubernetes, even though Docker itself was no longer the default runtime.
+
+---
+
+## Command-Line Tools for Containerd
+
+### `ctr` (Containerd Command-Line Tool)
+**`ctr`** is a command-line tool that comes with containerd. It is designed for **debugging** and working directly with containerd. It provides a limited set of features and is not user-friendly for managing containers in production environments. 
+
+Common uses of `ctr`:
+- Pulling images: `ctr images pull <image_name>`
+- Running containers: `ctr run <image_name>`
+
+However, `ctr` is not recommended for everyday container management as it lacks usability and many of the features needed in production environments.
+
+### `nerdctl` (Docker-like CLI for Containerd)
+**`nerdctl`** is a more user-friendly alternative to `ctr`. It is a Docker-like CLI for **containerd** that supports many of the same commands as Docker. Additionally, `nerdctl` provides access to newer containerd features such as:
+- Image encryption
+- Lazy image pulling
+- Image signing and verification
+- Kubernetes namespace support
+
+`nerdctl` is designed to be similar to Docker and provides an easy-to-use interface for managing containers. It is the recommended tool for most users who want to interact with containerd in a way similar to Docker.
+
+Example commands:
+- Running a container: `nerdctl run <image_name>`
+- Exposing ports: `nerdctl run -p 8080:80 <image_name>`
+
+### `crictl` (CRI Command-Line Tool)
+**`crictl`** is a command-line utility developed by the Kubernetes community to interact with **CRI-compatible** container runtimes. It is designed to work with all container runtimes that follow the CRI specification, not just containerd.
+
+Common uses of `crictl`:
+- Pulling images: `crictl pull <image_name>`
+- Listing containers: `crictl ps`
+- Viewing logs: `crictl logs <container_id>`
+- Executing commands inside containers: `crictl exec -it <container_id> <command>`
+
+`crictl` is primarily used for **debugging** and inspecting containers. It can be used across various CRI-compliant runtimes, making it versatile for different container technologies.
+
+---
+
+## Summary of Key Command-Line Tools
+
+| Tool         | Purpose                               | User-Friendliness | Recommended Use            |
+|--------------|---------------------------------------|-------------------|----------------------------|
+| `ctr`        | Low-level debugging with containerd   | Not user-friendly | Debugging only, limited features |
+| `nerdctl`    | Docker-like CLI for containerd        | User-friendly     | General-purpose container management |
+| `crictl`     | CLI for interacting with CRI runtimes | Moderate          | Debugging across CRI runtimes, inspecting containers |
+
+---
+
+## Conclusion
+Kubernetes originally supported Docker as its container runtime, but as Kubernetes grew, it introduced the Container Runtime Interface (CRI) to support other runtimes like containerd, which is now the default. Docker support was phased out in Kubernetes version 1.24, but Docker images remain compatible. 
+
+For managing containers in Kubernetes with containerd, tools like `ctr`, `nerdctl`, and `crictl` are used, with `nerdctl` being the most user-friendly and recommended for general-purpose container management.
+

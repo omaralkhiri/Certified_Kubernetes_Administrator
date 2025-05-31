@@ -1,0 +1,54 @@
+# Kubernetes Security Overview
+
+Kubernetes has become the go-to platform for hosting production and grid applications. Security is a primary concern when deploying and managing Kubernetes clusters. In this documentation, we provide a high-level overview of the security primitives in Kubernetes before diving deeper into each topic in subsequent sections.
+
+## Securing the Host and Cluster
+
+Before securing Kubernetes itself, it is essential to secure the infrastructure hosting the cluster. The following measures should be implemented:
+- Disable root access.
+- Disable password-based authentication.
+- Enforce SSH key-based authentication.
+- Implement additional security measures to protect the underlying physical or virtual infrastructure.
+
+If the host infrastructure is compromised, the entire Kubernetes environment is at risk.
+
+## API Server Security
+
+The Kubernetes API server is at the core of all operations within the cluster. It is accessed via the `kubectl` utility or directly through the API. To ensure security, controlling access to the API server is the first line of defense.
+
+### Authentication
+Authentication determines who can access the cluster. Several authentication mechanisms are available, including:
+- Static files containing user IDs and passwords
+- Token-based authentication
+- Certificate-based authentication
+- External authentication providers such as LDAP
+- Service accounts for machine authentication
+
+These mechanisms ensure that only authorized users and services can interact with the cluster.
+
+### Authorization
+Once authenticated, users must be authorized to perform specific actions. Authorization mechanisms in Kubernetes include:
+- **Role-Based Access Control (RBAC)**: Assigns users to groups with defined permissions.
+- **Attribute-Based Access Control (ABAC)**: Grants permissions based on user attributes.
+- **Webhook Authorization**: Integrates external authorization systems.
+
+These mechanisms enforce granular access control, preventing unauthorized operations within the cluster.
+
+## Secure Communication
+
+All communication between Kubernetes components is secured using TLS encryption. This includes interactions between:
+- The **etcd** cluster
+- The **Kube Controller Manager**
+- The **Scheduler**
+- The **API Server**
+- Worker node components such as **Kubelet** and **Kube Proxy**
+
+A dedicated section will cover the implementation of TLS certificates to secure communication between these components.
+
+## Pod and Network Security
+
+By default, all pods in a Kubernetes cluster can communicate with each other. To restrict access between pods, **Network Policies** should be implemented. These policies define rules governing pod-to-pod communication, enhancing security by limiting unauthorized network access.
+
+## Conclusion
+
+This document provided a high-level overview of Kubernetes security. We will explore each security aspect in greater detail in subsequent sections, covering authentication, authorization, TLS encryption, and network policies in practice.

@@ -1,0 +1,142 @@
+### Kubernetes Node Affinity Documentation
+
+#### Introduction
+
+In Kubernetes, **Node Affinity** is a powerful feature that allows you to specify rules for scheduling pods onto particular nodes in a cluster. This is especially useful for ensuring that pods are placed on nodes with specific resource requirements, such as placing a data processing pod on a node with high CPU and memory resources.
+
+While **Node Selectors** are a simpler mechanism to achieve this, **Node Affinity** provides more advanced capabilities, enabling the use of logical operators like `OR` and `NOT` for complex scheduling decisions. However, these advanced features come with increased complexity.
+
+In this documentation, we will explore how to use Node Affinity, its various operators, and how it influences the scheduling and execution of pods.
+
+#### Node Affinity vs Node Selectors
+
+**Node Selectors** are a basic way to schedule pods on nodes with specific labels. However, Node Affinity allows more complex expressions. Below is an example of how Node Affinity achieves the same goal of placing a pod on a large node:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: data-processing-pod
+spec:
+  containers:
+  - name: data-processing-container
+    image: data-processing-image
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: size
+            operator: In
+            values:
+            - large
+```
+
+This YAML file specifies that the pod should only be scheduled on a node labeled with `size=large`, similar to what we did with **Node Selectors**. However, Node Affinity offers greater flexibility in how you define scheduling rules.
+
+#### Node Affinity Syntax
+
+In the pod specification file, Node Affinity is defined under the `affinity` field. Specifically, it resides under `nodeAffinity`, and it is used to specify how pods should be placed on nodes based on their labels.
+
+Here’s the structure of the Node Affinity configuration:
+
+```yaml
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: <label-key>
+              operator: <operator>
+              values:
+                - <value1>
+                - <value2>
+```
+
+- **requiredDuringSchedulingIgnoredDuringExecution**: This is the rule that must be met during the scheduling phase. The pod can only be scheduled on a node that satisfies the conditions specified in the `nodeSelectorTerms`.
+- **matchExpressions**: This is where you specify the key, operator, and possible values for the label.
+
+#### Node Affinity Operators
+
+There are several operators that can be used in Node Affinity:
+
+1. **In**: Ensures that the pod is scheduled on nodes where the label key has a value in the specified list of values. 
+   Example: `size In [large, medium]`.
+
+2. **NotIn**: Ensures that the pod is scheduled on nodes where the label key does not have any value in the specified list of values.
+   Example: `size NotIn [small]`.
+
+3. **Exists**: Matches nodes where the label key exists, regardless of the value.
+   Example: `size Exists`.
+
+4. **DoesNotExist**: Matches nodes where the label key does not exist.
+   Example: `size DoesNotExist`.
+
+The `In` and `NotIn` operators are useful for specifying multiple valid or invalid values. The `Exists` and `DoesNotExist` operators are often used when you are only concerned with the presence or absence of a label without caring about its value.
+
+#### Affinity Types: Required vs. Preferred
+
+Node Affinity has two primary types for defining scheduling behavior:
+
+1. **requiredDuringSchedulingIgnoredDuringExecution**:
+   - This type means that the scheduler will only place the pod on a node that matches the affinity rules. If no suitable node is found, the pod will not be scheduled.
+   - Once the pod is scheduled, changes to the node's labels (e.g., removing the label) will **not** affect the running pod.
+
+2. **preferredDuringSchedulingIgnoredDuringExecution**:
+   - This type allows the scheduler to place the pod on a node that best matches the affinity rules. If no matching node is found, the pod will still be scheduled on another available node.
+   - As with `requiredDuringSchedulingIgnoredDuringExecution`, changes to the node's labels will **not** affect the running pod.
+
+#### Scheduling and Execution Phases
+
+Node Affinity applies to two phases in a pod's lifecycle: **scheduling** and **execution**.
+
+1. **During Scheduling**: This is when a pod is first created and the scheduler tries to find an appropriate node for it. Node Affinity rules are considered at this point. If no matching node is found, the pod may not be scheduled, depending on whether the rule is **required** or **preferred**.
+
+2. **During Execution**: This phase occurs after the pod has been scheduled and is running. If a node's label changes (e.g., the `size=large` label is removed from the node), the pod will continue to run on the node, and the affinity rules will be ignored, unless the affinity type is changed to **requiredDuringExecution** (which is expected in future versions).
+
+#### Handling Node Affinity Failures
+
+If a pod cannot be scheduled on a node due to a mismatch in the Node Affinity rules, the pod will not be scheduled. This is where the choice of **required** versus **preferred** comes into play.
+
+- **Required During Scheduling**: If no node matches the Node Affinity rules, the pod will **not** be scheduled.
+- **Preferred During Scheduling**: The scheduler will try its best to place the pod on a suitable node, but if no match is found, it will place the pod on an available node anyway.
+
+In future Kubernetes releases, new Node Affinity types like **requiredDuringExecution** are expected. This will allow the scheduler to **evict** pods that no longer meet the Node Affinity criteria if their node’s labels change after the pod has been scheduled.
+
+#### Example: Advanced Node Affinity
+
+Let’s take a look at a more complex example of Node Affinity, where we want to place a pod on nodes labeled as either `large` or `medium` but not `small`.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: data-processing-pod
+spec:
+  containers:
+  - name: data-processing-container
+    image: data-processing-image
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+            - key: size
+              operator: In
+              values:
+              - large
+              - medium
+            - key: size
+              operator: NotIn
+              values:
+              - small
+```
+
+In this example:
+- The pod will only be scheduled on nodes labeled with `size=large` or `size=medium`, but not on nodes labeled with `size=small`.
+
+#### Conclusion
+
+Node Affinity is a powerful feature in Kubernetes that allows you to control where pods are scheduled based on the labels of the nodes. It provides greater flexibility than node selectors and supports complex scheduling rules, such as logical operators (`In`, `NotIn`, `Exists`, etc.). Understanding how to use Node Affinity and its different types—**requiredDuringSchedulingIgnoredDuringExecution** and **preferredDuringSchedulingIgnoredDuringExecution**—will help you make more effective scheduling decisions for your workloads.
+
+In the next lecture, we will compare **Taints and Tolerations** with **Node Affinity** and explore how both can be used together for more granular control over pod placement.

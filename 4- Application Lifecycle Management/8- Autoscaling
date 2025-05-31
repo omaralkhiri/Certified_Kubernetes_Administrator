@@ -1,0 +1,68 @@
+# Kubernetes Auto Scaling Overview
+
+## Introduction
+This document provides an overview of Kubernetes auto scaling from an exam perspective, specifically covering Horizontal Pod Autoscaler (HPA) and Vertical Pod Autoscaler (VPA). Since auto scaling is a vast topic, this document keeps explanations concise while highlighting key concepts.
+
+For a more in-depth understanding, refer to the full course on Kubernetes Auto Scaling available on CodeCloud.
+
+## Understanding Scaling
+Before diving into Kubernetes auto scaling, it's essential to understand the basic concept of scaling in computing. Scaling determines how an application can handle increased load by adjusting resources.
+
+### Traditional Scaling (Physical Servers)
+In the past, applications were hosted on physical servers with predefined CPU and memory capacities. When the load increased, two scaling approaches were used:
+
+1. **Vertical Scaling (Scaling Up)**
+   - Adding more CPU or memory resources to an existing server.
+   - Required shutting down the server, upgrading resources, and restarting it.
+   
+2. **Horizontal Scaling (Scaling Out)**
+   - Adding more servers and distributing the load across multiple instances.
+   - This method allows the system to scale without downtime.
+
+## Scaling in Kubernetes
+Kubernetes, as a container orchestrator, enables applications to scale automatically based on demand. Scaling in Kubernetes can be categorized into two types:
+
+### 1. Scaling Workloads
+   - Adjusting the number of pods running within the cluster.
+   - Horizontal scaling: Adding more pods.
+   - Vertical scaling: Increasing resources allocated to existing pods.
+
+### 2. Scaling the Cluster
+   - Adjusting the number of nodes in the Kubernetes cluster.
+   - Horizontal scaling: Adding or removing nodes.
+   - Vertical scaling: Increasing the resources of existing nodes.
+
+## Methods of Scaling
+Scaling can be performed in two ways: manually or automatically.
+
+### Manual Scaling
+#### Horizontal Scaling:
+- **Cluster Infra:**
+  - Provision new nodes manually.
+  - Use `kubectl join` to add nodes to the cluster.
+  
+- **Workloads:**
+  - Use `kubectl scale` to increase or decrease the number of pods.
+
+#### Vertical Scaling:
+- **Cluster Infra:**
+  - Not commonly used in Kubernetes due to the need for server downtime.
+  - Instead, a new server with higher resources can be provisioned and added to the cluster while removing the older one.
+
+- **Workloads:**
+  - Use `kubectl edit` to modify resource limits and requests for pods within a deployment, stateful set, or replica set.
+
+### Automated Scaling
+Kubernetes provides built-in mechanisms for automatic scaling:
+
+1. **Cluster Auto Scaling:**
+   - Managed by the Kubernetes Cluster Autoscaler.
+   - Automatically adjusts the number of nodes based on workload demands.
+
+2. **Workload Auto Scaling:**
+   - **Horizontal Pod Autoscaler (HPA):** Scales the number of pods dynamically based on CPU/memory utilization or custom metrics.
+   - **Vertical Pod Autoscaler (VPA):** Adjusts CPU and memory requests of existing pods based on actual usage.
+
+## Conclusion
+This document provided an overview of auto scaling in Kubernetes, covering both manual and automated methods. The following sections will go deeper into HPA, VPA, and Cluster Autoscaler, exploring their configurations and use cases.
+

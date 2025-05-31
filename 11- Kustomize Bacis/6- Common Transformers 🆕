@@ -1,0 +1,112 @@
+# Customizing Kubernetes Configurations with Common Transformers
+
+In Kubernetes, managing large-scale configurations across multiple resources can quickly become overwhelming. To address this challenge, we can use a tool called **Customize**, which provides a set of built-in transformers to automate and manage configurations more efficiently. One of the most useful features in Customize is the concept of **common transformations**, which enables us to apply consistent changes across all of our Kubernetes resources.
+
+In this documentation, we will walk through the use of common transformations and how they can help us automate and simplify Kubernetes configuration management.
+
+## What Are Common Transformers?
+
+Common transformers in Customize allow us to apply specific, common changes to all Kubernetes resources defined in a `customization.yaml` file. These transformations can include adding labels, prefixes, suffixes, namespaces, or annotations to all resources, making them especially helpful for managing configurations in large-scale environments.
+
+The following common transformations are available:
+
+1. **Common Label Transformation**
+2. **Name Prefix and Suffix Transformation**
+3. **Namespace Transformation**
+4. **Common Annotations Transformation**
+
+Let's go over these transformations in detail.
+
+---
+
+## 1. Common Label Transformation
+
+The **Common Label Transformation** allows you to add a label to all Kubernetes resources defined in a `customization.yaml` file. This is useful for applying consistent metadata across all resources, such as tracking the organization, environment, or team responsible for the resource.
+
+### How to Use:
+
+To use the common label transformation, simply add the `commonLabels` property to your `customization.yaml` file, and specify the label key-value pairs you want to add. 
+
+### Example:
+
+```yaml
+commonLabels:
+  org: "cloud"
+  environment: "dev"
+```
+
+This will add the label `org: cloud` and `environment: dev` to all Kubernetes resources being managed by this customization.
+
+---
+
+## 2. Name Prefix and Suffix Transformation
+
+The **Name Prefix and Suffix Transformation** allows you to add a prefix or suffix to the names of all Kubernetes resources. This can be helpful when managing resources across multiple environments (e.g., adding a `-dev` suffix for a development environment).
+
+### How to Use:
+
+To add a prefix or suffix, use the `namePrefix` and `nameSuffix` properties in your `customization.yaml` file.
+
+### Example:
+
+```yaml
+namePrefix: "dev-"
+nameSuffix: "-v1"
+```
+
+This will add the prefix `dev-` and suffix `-v1` to all resource names managed by this customization.
+
+---
+
+## 3. Namespace Transformation
+
+The **Namespace Transformation** allows you to apply a specific namespace to all Kubernetes resources. This is useful when you want to organize your resources under a particular namespace for better resource isolation and management.
+
+### How to Use:
+
+To use the namespace transformation, simply specify the `namespace` property in your `customization.yaml` file.
+
+### Example:
+
+```yaml
+namespace: "my-namespace"
+```
+
+This will apply the namespace `my-namespace` to all resources in the customization.
+
+---
+
+## 4. Common Annotations Transformation
+
+The **Common Annotations Transformation** allows you to add annotations to all Kubernetes resources. Annotations can be used to store metadata that is not part of the core Kubernetes object specification, like tool-specific data, documentation links, or versioning information.
+
+### How to Use:
+
+To use the common annotations transformation, specify the `commonAnnotations` property in your `customization.yaml` file and provide the annotations as key-value pairs.
+
+### Example:
+
+```yaml
+commonAnnotations:
+  description: "This is a dev environment"
+  owner: "team-cloud"
+```
+
+This will add the annotations `description: "This is a dev environment"` and `owner: "team-cloud"` to all Kubernetes resources.
+
+---
+
+## Benefits of Common Transformers
+
+Using common transformations in Customize offers several benefits:
+
+- **Consistency:** Ensures that all Kubernetes resources have the same labels, annotations, prefixes, suffixes, and namespaces, helping to maintain uniformity across environments.
+- **Scalability:** With common transformations, you can easily manage a large number of resources without needing to manually edit each YAML file.
+- **Automation:** Reduce the risk of human error by automating the process of applying common configurations.
+- **Flexibility:** Customize can be extended with additional custom transformers, providing flexibility to suit your specific requirements.
+
+---
+
+## Conclusion
+
+Customize’s common transformations are a powerful feature for managing Kubernetes resources at scale. Whether you're adding labels, prefixes, suffixes, annotations, or namespaces, these transformations enable you to make consistent, reusable changes across your entire configuration in a simple and efficient manner. By incorporating these transformations, you can reduce the complexity of your Kubernetes management and focus more on your application logic.

@@ -1,0 +1,92 @@
+# Helm Charts Documentation
+
+Helm is a powerful command-line tool for managing Kubernetes applications. It simplifies tasks like installing, uninstalling, upgrading, and rolling back applications by automating the steps necessary to achieve a desired result. As a human operator, you specify the goal, and Helm figures out the detailed steps required to achieve that goal without you needing to manage every individual task.
+
+## How Helm Works
+
+Helm operates through **charts**, which serve as instruction manuals. Charts provide Helm with the necessary information to know exactly what steps to take when fulfilling a user’s request. These charts consist of several well-defined text files that Helm reads and interprets.
+
+### Key Helm Chart Files
+
+1. **`values.yaml`**: This file contains parameters that can be passed to the chart, allowing users to customize the installation. For example, it can specify the image name or the number of replicas. These values can be templated, meaning they can reference variables that Helm will replace with real values during the installation or upgrade process.
+   
+2. **`chart.yaml`**: This file contains metadata about the chart, including:
+   - `apiVersion`: Specifies the version of the chart API (v1 for Helm 2 and v2 for Helm 3).
+   - `appVersion`: Refers to the version of the application that the chart deploys (e.g., WordPress).
+   - `version`: The version of the chart itself, used to track changes to the chart.
+   - `name`: The name of the chart.
+   - `description`: A brief description of the chart.
+   - `type`: Indicates whether the chart is an application chart or a library chart.
+   - `dependencies`: Lists any charts that this chart depends on (e.g., a MariaDB chart for a WordPress application).
+
+   Helm differentiates charts created for Helm 2 and Helm 3 by using the `apiVersion` field. For instance, charts created for Helm 3 will have the `apiVersion` set to `v2`, while older charts created for Helm 2 may omit this field or set it to `v1`. This helps ensure compatibility with both versions of Helm.
+
+3. **Template Files**: The `templates/` directory contains YAML files that define Kubernetes resources (e.g., Deployments, Services). These templates use the values from the `values.yaml` file and are dynamically generated into the final Kubernetes manifests during deployment.
+
+### Templating in Helm
+
+Helm charts often use **templating** to allow dynamic configuration. This means that certain values in the template files (e.g., image names, replica counts) are placeholders that will be replaced by values from the `values.yaml` file during the chart's execution. This ensures that Helm can customize deployments according to the user's needs.
+
+For example:
+```yaml
+image: "{{ .Values.image.name }}"
+replicas: "{{ .Values.replicaCount }}"
+```
+Here, `{{ .Values.image.name }}` and `{{ .Values.replicaCount }}` will be replaced with the actual values defined in the `values.yaml` file.
+
+## Chart Directory Structure
+
+A typical chart has the following directory structure:
+
+```
+/my-chart
+    /templates          # Contains Kubernetes resource templates
+    chart.yaml          # Chart metadata file
+    values.yaml         # User-customizable configuration
+    README.md           # Documentation for the chart
+    LICENSE             # License information for the chart
+```
+
+Additional files may include:
+- **`charts/`**: A directory containing other charts that are dependencies of the main chart.
+- **`LICENSE`**: Information about the licensing of the chart.
+- **`README.md`**: A human-readable file providing details about the chart.
+
+## Types of Charts
+
+There are two main types of Helm charts:
+1. **Application Charts**: These charts are designed to deploy actual applications (e.g., WordPress, Nginx).
+2. **Library Charts**: These charts provide utility functions to assist in building other charts.
+
+## Dependencies
+
+Many applications require multiple components, such as a database and a web server. Helm allows you to specify chart dependencies, making it easier to deploy complex applications. For instance, a WordPress chart may depend on a MariaDB chart. This way, Helm can manage the entire deployment process, including handling the dependencies between different components.
+
+```yaml
+dependencies:
+  - name: mariadb
+    version: "10.x"
+    repository: "https://charts.bitnami.com/bitnami"
+```
+
+### Managing Dependencies
+
+Charts can include other charts as dependencies. The chart's `charts/` directory will contain the dependent charts, which can either be included directly or referenced from external repositories. Helm automatically resolves these dependencies when deploying the application.
+
+## Metadata Fields in `chart.yaml`
+
+- **`apiVersion`**: Indicates the version of the Helm chart API used (`v1` for Helm 2, `v2` for Helm 3).
+- **`appVersion`**: The version of the application being deployed.
+- **`version`**: The version of the Helm chart itself.
+- **`name`**: The name of the chart.
+- **`description`**: A short description of the chart's purpose.
+- **`type`**: Specifies whether this chart is an application chart or a library chart.
+- **`dependencies`**: A list of charts that this chart depends on.
+- **`keywords`**: A list of keywords that can help users search for this chart.
+- **`maintainers`**: A list of maintainers with their contact details.
+- **`home`**: A URL to the project's home page (optional).
+- **`icon`**: A URL to an icon representing the chart (optional).
+
+## Conclusion
+
+Helm charts simplify the process of deploying applications on Kubernetes by abstracting complex tasks. By defining charts with proper metadata, templates, and dependencies, you ensure that the deployment process is consistent and repeatable. Understanding the structure and components of a Helm chart is essential for both creating and using Helm effectively.

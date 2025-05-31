@@ -1,0 +1,74 @@
+# Kubernetes Operator Framework
+
+## Overview
+
+The Kubernetes Operator Framework enables the deployment and management of applications as a single entity by packaging together a **Custom Resource Definition (CRD)** and a **custom controller**. Traditionally, CRDs and controllers are created and deployed separately. However, with the Operator Framework, these components can be bundled and deployed together, simplifying application management in Kubernetes.
+
+## Key Features of the Operator Framework
+
+- Automates the creation of **CRDs** and related resources.
+- Deploys the **custom controller** as a **Kubernetes Deployment**.
+- Enhances automation by handling **installation, maintenance, backup, and restoration** of applications.
+
+## Real-Life Use Case: etcd Operator
+
+One of the most widely used operators is the **etcd operator**, which manages an etcd cluster within Kubernetes. It defines an **EtcdCluster CRD** and deploys a corresponding custom controller that:
+
+- Watches for the **EtcdCluster** resource and deploys an etcd cluster.
+- Handles **backups and restorations** using additional backup and restore controllers.
+- Performs automated failure recovery, ensuring high availability.
+
+## How Operators Work
+
+Operators extend Kubernetes capabilities by automating tasks that a human operator would typically perform, such as:
+
+1. **Installing** an application.
+2. **Managing** lifecycle operations (scaling, updates, configuration changes).
+3. **Taking backups** and restoring data.
+4. **Handling failure recovery** and automated troubleshooting.
+
+## Available Operators
+
+Many popular applications have pre-built operators available in the **OperatorHub**. Examples include:
+
+- etcd
+- MySQL
+- Prometheus
+- Grafana
+- ArgoCD
+- Istio
+
+## Installation Steps
+
+Deploying an application using an operator typically involves three steps:
+
+1. **Install the Operator Lifecycle Manager (OLM)**
+   ```sh
+   curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/latest/download/install.sh | bash
+   ```
+
+2. **Install the Operator from OperatorHub**
+   ```sh
+   kubectl apply -f <operator_yaml>
+   ```
+
+3. **Deploy the Custom Resource to Instantiate the Application**
+   ```yaml
+   apiVersion: etcd.database.coreos.com/v1beta2
+   kind: EtcdCluster
+   metadata:
+     name: example-etcd-cluster
+   spec:
+     size: 3
+     version: "3.5.0"
+   ```
+   ```sh
+   kubectl apply -f etcd-cluster.yaml
+   ```
+
+## Conclusion
+
+The Operator Framework simplifies application lifecycle management in Kubernetes by automating deployment, monitoring, scaling, and backup operations. While in-depth knowledge of operators is not typically required for certification exams, understanding CRDs and their role in operators is beneficial for Kubernetes practitioners.
+
+For more information, visit the [OperatorHub](https://operatorhub.io/) to explore available operators.
+

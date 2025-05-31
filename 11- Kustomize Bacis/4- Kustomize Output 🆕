@@ -1,0 +1,88 @@
+# Documentation for Using `kubectl` with `kubectl apply` and `kubectl delete` with Customize
+
+In this section, we'll walk through how to build, apply, and delete Kubernetes resources using `kubectl` and `customize`, with explanations of the necessary commands.
+
+## Customizing and Applying Resources
+
+When working with **Customize**, the `kubectl` `apply` command doesn't directly apply resources. Instead, `customize` builds the necessary configurations and outputs them to the console. However, **Customize** does not automatically apply these configurations to the Kubernetes cluster. This is where the `kubectl apply` command comes in.
+
+The typical `kubectl apply` command works by taking configuration files (YAML) and applying them to the Kubernetes cluster. With `customize`, we first generate the necessary configurations using `customize build`, and then pipe the output of the `customize build` command directly into `kubectl apply`. 
+
+### Command to Apply Resources with `kubectl` and `Customize`
+To both build and apply the configurations, use the following command:
+
+```bash
+customize build <directory> | kubectl apply -f -
+```
+
+Here’s what’s happening:
+
+- `customize build <directory>`: This generates the YAML configuration files based on your `customization.yaml` file, applying any transformations you've defined in your Customize setup.
+- `|`: The pipe operator, a Linux feature, takes the output from the first command (i.e., `customize build <directory>`) and passes it as input to the second command (`kubectl apply -f -`).
+- `kubectl apply -f -`: This applies the output of the previous command to your Kubernetes cluster.
+
+By running this command, the Kubernetes resources (such as deployments, services, etc.) are created, such as an Nginx deployment and service.
+
+### Native Way to Apply Resources Using `kubectl`
+You can also apply resources directly using `kubectl` without `customize`. To do so, use the following command:
+
+```bash
+kubectl apply -k <directory>
+```
+
+Where `<directory>` is the path to the directory containing your `customization.yaml` file. The `-k` flag tells `kubectl` to apply the resources defined in the directory using Customize.
+
+---
+
+## Deleting Resources
+
+Deleting resources with `customize` follows a similar pattern to applying resources, but instead of using `apply`, we replace it with the `delete` action.
+
+### Command to Delete Resources with `kubectl` and `Customize`
+To delete resources, use the following command:
+
+```bash
+customize build <directory> | kubectl delete -f -
+```
+
+This works similarly to applying resources:
+
+- `customize build <directory>`: This generates the configuration files.
+- `|`: The pipe operator sends the generated configuration as input to the next command.
+- `kubectl delete -f -`: This deletes the resources defined in the generated configuration files.
+
+By running this command, Kubernetes will remove the resources (like deployments and services) previously created.
+
+### Native Way to Delete Resources Using `kubectl`
+To delete resources directly with `kubectl` and Customize, use:
+
+```bash
+kubectl delete -k <directory>
+```
+
+Where `<directory>` is the path to the directory containing your `customization.yaml` file. The `-k` flag allows `kubectl` to delete resources based on the Customize configuration.
+
+---
+
+## Conclusion
+
+By using the `customize build` command in combination with the pipe (`|`) operator, you can easily build and apply configurations using `kubectl apply`. Similarly, for deletion, you can replace the `apply` command with `delete`. This workflow leverages `customize` to manage Kubernetes resources effectively while keeping your configurations flexible and maintainable.
+
+### Quick Reference
+
+- **Apply Resources:**
+  ```bash
+  customize build <directory> | kubectl apply -f -
+  ```
+- **Apply Resources Natively:**
+  ```bash
+  kubectl apply -k <directory>
+  ```
+- **Delete Resources:**
+  ```bash
+  customize build <directory> | kubectl delete -f -
+  ```
+- **Delete Resources Natively:**
+  ```bash
+  kubectl delete -k <directory>
+  ```

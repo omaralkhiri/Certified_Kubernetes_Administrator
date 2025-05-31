@@ -1,0 +1,141 @@
+# Helm vs Customize: Managing Kubernetes Manifests for Different Environments
+
+## Introduction
+
+When working with Kubernetes applications, it's essential to customize your deployment configurations based on the environment. Two popular tools that can help achieve this are **Helm** and **Customize**. Both tools allow you to modify Kubernetes manifests on a per-environment basis, but they differ in approach and complexity. In this documentation, we will discuss how Helm addresses this problem, compare it with Customize, and highlight the pros and cons of each tool to help you make an informed decision.
+
+## Overview of Helm
+
+Helm is a Kubernetes package manager that allows you to define, install, and upgrade even the most complex Kubernetes applications. Helm uses **Go templating syntax** to insert variables into Kubernetes manifests, which can then be customized for different environments.
+
+### Using Go Templating in Helm
+
+In Helm, you can insert variables into Kubernetes manifests using Go templating syntax. Here's an example of a deployment configuration where a variable is used in place of a hard-coded value:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    spec:
+      containers:
+        - name: my-app
+          image: my-image:{{ .Values.image.tag }}
+```
+
+In the above example:
+- `{{ .Values.replicaCount }}` and `{{ .Values.image.tag }}` are Go templating expressions that reference values defined in a `values.yaml` file.
+  
+### Providing Values in Helm
+
+To provide specific values for these variables, you can create a `values.yaml` file that contains the configuration values:
+
+```yaml
+replicaCount: 1
+image:
+  tag: "2.4.4"
+```
+
+In this case:
+- The `replicaCount` value is set to `1`.
+- The `image.tag` is set to `2.4.4`.
+
+When deploying the application, Helm will substitute the values from the `values.yaml` file into the respective places in the templates.
+
+### Helm Project Structure
+
+A typical Helm project structure consists of two main components:
+
+1. **Templates**: The `templates` directory contains Kubernetes manifests with placeholders (Go templating syntax) for environment-specific variables.
+2. **Values Files**: In the `values` directory, you will have separate `values.yaml` files for each environment, such as `values.dev.yaml`, `values.staging.yaml`, and `values.prod.yaml`.
+
+This structure allows you to deploy the same set of templates with different configurations for different environments.
+
+Example project structure:
+
+```
+my-helm-chart/
+  ├── charts/
+  ├── templates/
+  │   └── deployment.yaml
+  ├── values/
+  │   ├── values.dev.yaml
+  │   ├── values.staging.yaml
+  │   └── values.prod.yaml
+  └── Chart.yaml
+```
+
+### Helm Features
+
+Helm is more than just a templating engine. It is a complete package manager for Kubernetes applications, similar to `apt` or `yum` for Linux systems. Some of its key features include:
+- **Conditionals**: Allows you to include or exclude resources based on certain conditions.
+- **Loops**: Provides the ability to iterate over lists or ranges to create multiple resources.
+- **Functions**: You can define and use custom functions in templates.
+- **Hooks**: Helm supports hooks, which allow you to perform actions at certain points during the lifecycle of a release.
+
+These features add flexibility and functionality, but they also introduce complexity.
+
+## Pros and Cons of Helm
+
+### Pros:
+- **Rich Feature Set**: Helm provides advanced features like conditionals, loops, functions, and hooks, which can help manage complex applications.
+- **Reusability**: Helm charts are reusable across different projects and teams, making them an ideal choice for large-scale deployments.
+- **Package Management**: Helm simplifies the process of packaging and distributing Kubernetes applications.
+
+### Cons:
+- **Complexity**: Helm charts can become difficult to read and understand, especially when dealing with complex Go templating syntax.
+- **Non-standard YAML**: Helm uses Go templating, which makes the YAML files not fully valid according to Kubernetes standards. This can make debugging and troubleshooting more difficult.
+- **Learning Curve**: Due to its many features, Helm has a steeper learning curve compared to simpler tools like Customize.
+
+## Customize: A Simpler Approach
+
+While Helm offers many advanced features, **Customize** provides a simpler, more intuitive approach to managing Kubernetes manifests. With Customize, you don’t need to deal with Go templating syntax, and your configurations remain in standard, valid YAML format.
+
+### How Customize Works
+
+Customize works by creating overlays on top of base Kubernetes manifests. These overlays allow you to apply environment-specific changes without modifying the base configuration. You create a separate configuration for each environment (e.g., `dev`, `staging`, `prod`) and apply the necessary modifications to the base manifests.
+
+### Customize Project Structure
+
+A typical Customize project structure consists of:
+- **Base configurations**: The base Kubernetes manifests, which are used for all environments.
+- **Overlays**: Environment-specific configurations that modify the base manifests as needed.
+
+Example project structure:
+
+```
+my-customize-app/
+  ├── base/
+  │   ├── deployment.yaml
+  │   └── service.yaml
+  └── overlays/
+      ├── dev/
+      │   └── kustomization.yaml
+      ├── staging/
+      │   └── kustomization.yaml
+      └── prod/
+          └── kustomization.yaml
+```
+
+### Pros and Cons of Customize
+
+### Pros:
+- **Simplicity**: Customize keeps everything in valid YAML and doesn’t require Go templating, making it easier to read and understand.
+- **Ease of Use**: The learning curve is much lower compared to Helm, making it an excellent choice for teams that need a quick solution.
+- **Kubernetes Native**: Since Customize doesn’t introduce templating syntax, the configuration remains valid Kubernetes YAML, reducing the chances of syntax errors.
+
+### Cons:
+- **Limited Features**: Customize lacks the advanced features of Helm, such as conditionals, loops, and hooks. For simple environments, it may be sufficient, but for complex scenarios, it might fall short.
+- **Less Reusable**: Unlike Helm charts, which can be easily shared and reused, Customize configurations are typically more environment-specific and less reusable.
+
+## Conclusion: Helm vs Customize
+
+Both Helm and Customize serve the purpose of managing Kubernetes manifests for different environments, but they approach the problem in different ways:
+
+- **Helm** is a powerful package manager with advanced templating and features like conditionals, loops, and hooks, making it suitable for complex applications. However, it comes with a steeper learning curve and can be difficult to read due to the use of Go templating syntax.
+- **Customize** is simpler and more intuitive, offering a Kubernetes-native way to manage environment-specific configurations. It is ideal for teams looking for an easier tool that doesn’t require dealing with templating, but it lacks the advanced features of Helm.
+
+When deciding which tool to use, consider the complexity of your application and the trade-offs between simplicity and functionality. If you need advanced features and are willing to deal with a more complex setup, Helm may be the right choice. If simplicity and readability are your priorities, Customize may be a better fit.

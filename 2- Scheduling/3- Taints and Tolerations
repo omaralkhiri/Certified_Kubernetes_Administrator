@@ -1,0 +1,101 @@
+### Kubernetes Taints and Tolerations Documentation
+
+#### Introduction
+In Kubernetes, **taints** and **tolerations** are mechanisms used to control which pods can be scheduled onto which nodes. They allow us to set restrictions on what pods are allowed to run on specific nodes in the cluster. This is particularly useful when you want to dedicate a node for a specific use case or application.
+
+In this documentation, we will discuss how taints and tolerations work and how they can be used to control pod placement on nodes in a Kubernetes cluster.
+
+#### The Analogy of Taints and Tolerations
+To understand taints and tolerations, let's use an analogy:
+
+Imagine a person standing in a room. There are bugs flying around, and we want to prevent them from landing on the person. We can spray the person with a special scent, which makes the bugs "intolerant" to the smell. When bugs approach the person, they are repelled by the scent and avoid landing on the person.
+
+However, not all bugs are intolerant to the scent. Some bugs might be able to tolerate the smell, so they still land on the person despite the taint (scent). Therefore, two things determine whether a bug can land on the person:
+1. The scent applied to the person (the **taint** on the node).
+2. The bug's tolerance level to that particular scent (the **toleration** on the pod).
+
+In Kubernetes:
+- The person represents a **node**.
+- The bugs represent **pods**.
+- The scent is the **taint** applied to the node.
+- The bug's ability to tolerate the scent is the **toleration** applied to the pod.
+
+#### How Taints and Tolerations Work in Kubernetes
+
+Taints are applied to nodes, and tolerations are applied to pods. The Kubernetes scheduler will place a pod on a node only if the pod has a toleration that matches the taint on the node.
+
+#### Example Scenario
+
+Imagine a Kubernetes cluster with three worker nodes: **node-1**, **node-2**, and **node-3**. We have four pods: **Pod A**, **Pod B**, **Pod C**, and **Pod D**. Initially, there are no taints or tolerations, so the scheduler will try to place the pods across the nodes evenly.
+
+Now, suppose we want to dedicate **node-1** to a specific application. We can achieve this by applying a **taint** to **node-1** to restrict all other pods from being scheduled there.
+
+### Step 1: Applying a Taint to a Node
+To apply a taint to **node-1**, we can use the following command:
+
+```bash
+kubectl taint nodes node-1 key=value:NoSchedule
+```
+
+This command sets a taint on **node-1** with the key `key`, the value `value`, and the effect `NoSchedule`. The `NoSchedule` effect means that pods without the matching toleration will not be scheduled on **node-1**.
+
+### Step 2: Adding Tolerations to Pods
+Next, we want to allow **Pod D** to be scheduled on **node-1**, as it belongs to the same application. To do this, we add a **toleration** to **Pod D** that matches the taint on **node-1**.
+
+In the pod definition YAML file for **Pod D**, add the following toleration under the `spec` section:
+
+```yaml
+spec:
+  tolerations:
+    - key: "key"
+      operator: "Equal"
+      value: "value"
+      effect: "NoSchedule"
+```
+
+This toleration allows **Pod D** to be scheduled on **node-1**, even though **node-1** has the taint `key=value:NoSchedule`.
+
+### How the Scheduler Works with Taints and Tolerations
+With the taint and toleration in place, the Kubernetes scheduler will work as follows:
+
+1. The scheduler attempts to place **Pod A** on **node-1**, but it is repelled by the taint, so it is placed on **node-2**.
+2. The scheduler attempts to place **Pod B** on **node-1**, but again, it is repelled by the taint, so it is placed on **node-3**.
+3. The scheduler attempts to place **Pod C** on **node-1**, but it is also repelled by the taint, so it is placed on **node-2**.
+4. The scheduler attempts to place **Pod D** on **node-1**. Since **Pod D** has the matching toleration, it is successfully scheduled on **node-1**.
+
+#### Taint Effects
+There are three types of taint effects:
+1. **NoSchedule**: Pods that do not tolerate the taint will not be scheduled on the node.
+2. **PreferNoSchedule**: The scheduler will try to avoid placing a pod on the node, but it is not guaranteed. Pods without a matching toleration might still be scheduled there if no other suitable node is available.
+3. **NoExecute**: Pods that do not tolerate the taint will not be scheduled on the node, and if they are already running on the node, they will be evicted.
+
+#### Example of Applying a Taint with the NoExecute Effect
+Let's assume that **node-1** is dedicated to **Pod D** and we want to prevent any existing pods from running on **node-1** unless they tolerate the taint. We apply the `NoExecute` taint effect as follows:
+
+```bash
+kubectl taint nodes node-1 key=value:NoExecute
+```
+
+If **Pod C** was already running on **node-1**, it would be evicted (terminated) because it does not tolerate the taint.
+
+#### Taints on the Master Node
+By default, Kubernetes applies a taint to the master node that prevents any pods from being scheduled on it. This is because the master node is responsible for managing the cluster, and it is generally not recommended to run application workloads on it.
+
+You can see the taint applied to the master node by running:
+
+```bash
+kubectl describe node <master-node-name>
+```
+
+In the taint section, you will see something like:
+
+```bash
+Taints:  node-role.kubernetes.io/master:NoSchedule
+```
+
+You can modify this behavior if needed, but it is considered a best practice to not schedule application workloads on the master node.
+
+#### Conclusion
+Taints and tolerations are powerful tools in Kubernetes for controlling pod placement on nodes. By applying taints to nodes and tolerations to pods, you can restrict which pods can be scheduled on specific nodes. This is useful for dedicating resources to specific applications and ensuring that workloads are placed on the appropriate nodes based on your requirements.
+
+Remember, taints are applied to nodes, and tolerations are applied to pods. Taints and tolerations work together to control pod scheduling, but they do not guarantee that a pod will be placed on a specific node. For more fine-grained control over pod placement, you can use **node affinity**, which will be covered in the next lecture.

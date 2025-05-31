@@ -1,0 +1,76 @@
+# Kubernetes Cluster Architecture Documentation
+
+## Overview
+
+Kubernetes is an open-source platform for automating the deployment, scaling, and management of containerized applications. The architecture of a Kubernetes cluster is designed to manage the lifecycle of containers in an efficient and automated way. This documentation provides a high-level overview of Kubernetes architecture and explains how its various components work together to manage containerized applications.
+
+We will use an analogy of ships to illustrate the Kubernetes architecture:
+
+- **Cargo Ships**: These are worker nodes that do the actual work of running containers.
+- **Control Ships**: These are the master nodes that manage and monitor the cargo ships (worker nodes).
+
+The purpose of Kubernetes is to ensure that applications in the form of containers are deployed and scaled efficiently. This is achieved through the coordination of multiple components in the cluster, which include worker nodes, control plane components, and communication mechanisms.
+
+## Kubernetes Architecture: High-Level View
+
+### Nodes and Pods
+At a high level, a Kubernetes cluster consists of nodes that are either physical or virtual machines. These nodes can be deployed on-premise or in the cloud. 
+
+- **Worker Nodes (Cargo Ships)**: These nodes are responsible for hosting and running the application containers. A worker node runs containers and is where the application’s workload resides. It is equivalent to the cargo ship that carries the containers across the sea.
+- **Master Nodes (Control Ships)**: These nodes are responsible for managing the Kubernetes cluster. They monitor and control the worker nodes, ensuring that containers are scheduled appropriately and that the cluster operates efficiently. Master nodes are analogous to the control ships, which are responsible for monitoring and managing the cargo ships.
+
+### Control Plane Components
+The control plane consists of several key components that work together to ensure the proper functioning of the Kubernetes cluster:
+
+1. **etcd**: A highly available key-value store used to store the configuration data of the cluster. It stores critical information about the state of the cluster, including data on nodes, containers, services, and configurations.
+   
+2. **Kube API Server**: The API server is the central management component of Kubernetes. It exposes the Kubernetes API and facilitates communication between the control plane and worker nodes. It is the gateway through which users and other systems interact with the cluster.
+
+3. **Kube Scheduler**: The scheduler is responsible for determining which worker node a container (or pod) should run on, based on factors like resource availability, resource requirements, and other scheduling constraints (e.g., taints, tolerations, or node affinity rules). The scheduler ensures that containers are placed on the right nodes in the cluster, just like cranes identify the right cargo ship for containers.
+
+4. **Kube Controller Manager**: The controller manager is responsible for running controllers that handle different operational aspects of the cluster. Some of the key controllers are:
+   - **Node Controller**: Manages node lifecycles, onboarding new nodes, handling node failures, etc.
+   - **Replication Controller**: Ensures that the desired number of replicas of containers are running within the cluster.
+   - **Deployment Controller**: Manages deployment strategies, including rolling updates and rollbacks.
+
+### Communication Between Components
+In Kubernetes, the various components need to communicate to function correctly. The Kube API server is the central component that orchestrates all operations within the cluster. It exposes the Kubernetes API, which is used by external users, components within the cluster, and third-party applications to perform management operations.
+
+To understand the communication flow:
+- Users interact with the Kube API server through the Kubernetes CLI (`kubectl`), which makes API calls to perform management tasks.
+- The Kube API server manages the state of the cluster by updating the etcd database and notifying other components like the scheduler and controllers.
+- The scheduler uses the information stored in etcd to place containers on appropriate worker nodes.
+- Controllers monitor the state of the cluster and take corrective actions, like scaling the number of containers or managing node availability.
+
+## Kubernetes Components and Their Responsibilities
+
+### 1. **Worker Nodes (Cargo Ships)**
+- **Containers**: These are the smallest units of deployment within Kubernetes, running the application workloads.
+- **Pods**: A pod is the smallest and simplest Kubernetes object. A pod represents a single instance of a running process in the cluster and may contain one or more containers.
+- **Kubelet**: A Kubelet is an agent running on each worker node. It ensures that the containers within its pod are running and healthy.
+- **Kube Proxy**: This component runs on each worker node and ensures that networking and communication between pods are handled correctly. It also manages the network traffic between pods and services.
+
+### 2. **Master Nodes (Control Ships)**
+- **etcd**: Stores all critical cluster data in a highly available, key-value format.
+- **Kube API Server**: Acts as the entry point for managing the cluster, allowing users to interact with Kubernetes through API calls.
+- **Kube Scheduler**: Places containers (pods) on the appropriate worker nodes based on scheduling policies.
+- **Controller Manager**: Responsible for running controllers that ensure the cluster's state matches the desired state (e.g., replication, deployments).
+
+### 3. **Communication & Management**
+- **Kube API Server**: Central point for communication, ensuring the coordination between different components within the cluster.
+- **User Interactions**: Kubernetes provides a user-friendly CLI tool (`kubectl`) to interact with the API server. Users can query the cluster, deploy applications, or perform any management operation through the API.
+- **Automated Operations**: Controllers and the scheduler ensure that the cluster is operating as desired without manual intervention. For instance, if a pod goes down, the replication controller ensures that a new pod is launched to replace it.
+
+## Kubernetes Components in Action: The Ship Analogy
+
+Imagine a large port where many ships (worker nodes) are loading and unloading containers (application workloads). The cranes (schedulers) carefully place containers on the appropriate ships (worker nodes) based on their size, cargo type, and destination.
+
+Each ship (worker node) has a cargo manifest (etcd) that tracks what containers are onboard. The operations team (controller manager) ensures that the ships are functioning properly and that each ship follows its schedule. If there is a problem, such as a ship breaking down (node failure), the operations team can handle it and ensure that the containers are either rerouted or replaced.
+
+The entire port’s operations are monitored and controlled by the central control tower (Kube API server), which manages all communications, schedules cargo placement, and ensures that the port operates smoothly.
+
+## Conclusion
+
+The Kubernetes architecture provides a powerful and flexible platform for managing containerized applications at scale. By understanding the roles of different components, such as the worker nodes (cargo ships), master nodes (control ships), and control plane components (Kube API server, etcd, scheduler, controllers), you can effectively deploy and manage your applications in a highly automated manner.
+
+The analogy of cargo ships and control ships helps to visualize the different functions and responsibilities within a Kubernetes cluster, ensuring that containers are scheduled, managed, and communicated between nodes efficiently.

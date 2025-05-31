@@ -1,0 +1,145 @@
+# Documentation: Cluster Roles and Cluster Role Bindings in Kubernetes
+
+## Overview
+
+In Kubernetes, **Roles** and **Role Bindings** are used to manage permissions within a specific namespace. However, when it comes to managing permissions for **cluster-wide resources** (such as nodes, persistent volumes, or the cluster itself), Kubernetes provides **Cluster Roles** and **Cluster Role Bindings**. This documentation explains the concepts of Cluster Roles and Cluster Role Bindings, their use cases, and how they differ from namespace-scoped roles and bindings.
+
+---
+
+## Namespaced vs. Cluster-Scoped Resources
+
+### Namespaced Resources
+Namespaced resources are those that exist within a specific namespace. Examples include:
+- Pods
+- ReplicaSets
+- Deployments
+- Services
+- Secrets
+- Roles
+- Role Bindings
+
+When you create these resources, they are associated with a namespace. If no namespace is specified, they are created in the **default namespace**. To view, update, or delete these resources, you must specify the correct namespace.
+
+### Cluster-Scoped Resources
+Cluster-scoped resources are not tied to any namespace and are accessible across the entire cluster. Examples include:
+- Nodes
+- Persistent Volumes
+- Cluster Roles
+- Cluster Role Bindings
+- Certificate Signing Requests
+- Namespaces (the namespace object itself is not namespaced)
+
+These resources are created without specifying a namespace and are managed at the cluster level.
+
+To view a comprehensive list of namespaced and non-namespaced resources, run the following command:
+```bash
+kubectl api-resources --namespaced=true
+```
+
+---
+
+## Cluster Roles and Cluster Role Bindings
+
+### Cluster Roles
+A **Cluster Role** is similar to a Role, but it applies to cluster-scoped resources. For example:
+- A **Cluster Admin Role** can grant permissions to view, create, or delete nodes in the cluster.
+- A **Storage Admin Role** can authorize a user to manage persistent volumes and claims.
+
+#### Example: Creating a Cluster Role
+To create a Cluster Role, define a YAML file with the `kind: ClusterRole` and specify the rules. For example, to create a Cluster Role for managing nodes:
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-admin-role
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "create", "delete"]
+```
+
+Create the Cluster Role using the following command:
+```bash
+kubectl create -f cluster-role.yaml
+```
+
+### Cluster Role Bindings
+A **Cluster Role Binding** links a user, group, or service account to a Cluster Role. This grants the specified permissions across the entire cluster.
+
+#### Example: Creating a Cluster Role Binding
+To bind a user to a Cluster Role, define a YAML file with the `kind: ClusterRoleBinding`. For example:
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-admin-role-binding
+subjects:
+- kind: User
+  name: cluster-admin-user
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+Create the Cluster Role Binding using the following command:
+```bash
+kubectl create -f cluster-role-binding.yaml
+```
+
+---
+
+## Key Points to Note
+
+1. **Cluster Roles for Namespaced Resources**:
+   - While Cluster Roles are primarily used for cluster-scoped resources, they can also be used to grant permissions for namespaced resources.
+   - When a Cluster Role is used for namespaced resources, the permissions apply to those resources **across all namespaces**.
+   - For example, if a Cluster Role grants access to Pods, the user will have access to Pods in **all namespaces**, not just a specific one.
+
+2. **Default Cluster Roles**:
+   - Kubernetes creates several Cluster Roles by default during cluster setup. These roles provide predefined permissions for common use cases, such as `cluster-admin`, `edit`, and `view`.
+
+3. **Role Bindings vs. Cluster Role Bindings**:
+   - **Role Bindings** are used to grant permissions within a specific namespace.
+   - **Cluster Role Bindings** are used to grant permissions across the entire cluster.
+
+---
+
+## Practical Use Cases
+
+1. **Cluster Administration**:
+   - Use Cluster Roles and Cluster Role Bindings to grant administrative access to cluster-wide resources like nodes and persistent volumes.
+
+2. **Cross-Namespace Access**:
+   - Use Cluster Roles to grant access to namespaced resources (e.g., Pods, Services) across all namespaces.
+
+3. **Storage Management**:
+   - Create a Cluster Role for storage administrators to manage persistent volumes and claims across the cluster.
+
+---
+
+## Commands for Exploration
+
+1. List all API resources and their scope:
+   ```bash
+   kubectl api-resources --namespaced=true
+   ```
+
+2. View existing Cluster Roles:
+   ```bash
+   kubectl get clusterroles
+   ```
+
+3. View existing Cluster Role Bindings:
+   ```bash
+   kubectl get clusterrolebindings
+   ```
+
+---
+
+## Conclusion
+
+Cluster Roles and Cluster Role Bindings are essential for managing permissions for cluster-scoped resources and for granting cross-namespace access to namespaced resources. By understanding their use cases and how they differ from Roles and Role Bindings, you can effectively manage access control in your Kubernetes cluster.
+
+For hands-on practice, refer to the upcoming practice tests to explore default Cluster Roles and their functionalities.
